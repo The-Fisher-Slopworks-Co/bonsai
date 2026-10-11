@@ -1,0 +1,9 @@
+*.xcodeproj/
+build/
+DerivedData/
+.DS_Store
+*.xcuserstate
+xcuserdata/
+tests/gitlab/.env
+tests/gitlab/data/
+__pycache__/

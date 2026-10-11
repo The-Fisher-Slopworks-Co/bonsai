@@ -1,0 +1,71 @@
+name: Bonsai
+options:
+  bundleIdPrefix: dev.txssu
+  deploymentTarget:
+    macOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MACOSX_DEPLOYMENT_TARGET: "26.0"
+    SYMROOT: $(PROJECT_DIR)/build
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+    LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+targets:
+  Bonsai:
+    type: application
+    platform: macOS
+    sources:
+      - path: Bonsai
+    info:
+      path: Bonsai/Info.plist
+      properties:
+        CFBundleDisplayName: Bonsai
+        CFBundleShortVersionString: "0.1"
+        CFBundleVersion: "1"
+        CFBundleDevelopmentRegion: en
+        CFBundleLocalizations: [en, ru]
+        LSApplicationCategoryType: public.app-category.developer-tools
+        LSMinimumSystemVersion: "26.0"
+        NSHumanReadableCopyright: ""
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.txssu.Bonsai
+        PRODUCT_NAME: Bonsai
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_APP_SANDBOX: NO
+        GENERATE_INFOPLIST_FILE: NO
+  BonsaiTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: BonsaiTests
+    dependencies:
+      - target: Bonsai
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.txssu.BonsaiTests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Bonsai.app/Contents/MacOS/Bonsai
+        BUNDLE_LOADER: $(TEST_HOST)
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Bonsai:
+    build:
+      targets:
+        Bonsai: all
+        BonsaiTests: [test]
+    test:
+      targets:
+        - BonsaiTests
+      gatherCoverageData: false
+    run:
+      config: Debug
