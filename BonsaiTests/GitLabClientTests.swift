@@ -1,11 +1,14 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 struct GitLabClientTests {
     func client(_ handler: @escaping MockURLProtocol.Handler) -> (GitLabClient, URL) {
         let server = MockURLProtocol.server(handler)
-        return (GitLabClient(server: server, token: "glpat-abc", configuration: MockURLProtocol.configuration()), server)
+        return (
+            GitLabClient(server: server, token: "glpat-abc", configuration: MockURLProtocol.configuration()), server
+        )
     }
 
     @Test func userSuccessSendsTokenHeader() async throws {
@@ -13,7 +16,8 @@ struct GitLabClientTests {
             (200, json(#"{"id": 3, "username": "eugene", "name": "Eugene", "avatar_url": "https://x/a.png"}"#))
         }
         let user = try await gitlab.user()
-        #expect(user == GitLabUser(id: 3, username: "eugene", name: "Eugene", avatarURL: URL(string: "https://x/a.png")))
+        #expect(
+            user == GitLabUser(id: 3, username: "eugene", name: "Eugene", avatarURL: URL(string: "https://x/a.png")))
         let request = try #require(MockURLProtocol.recorded(server).first)
         #expect(request.url?.path() == "/api/v4/user")
         #expect(request.value(forHTTPHeaderField: "PRIVATE-TOKEN") == "glpat-abc")
@@ -32,7 +36,9 @@ struct GitLabClientTests {
         await #expect(throws: GitLabError.unreachable) { try await gitlab.user() }
     }
 
-    @Test(arguments: [URLError.Code.serverCertificateUntrusted, .serverCertificateHasUnknownRoot, .serverCertificateHasBadDate])
+    @Test(arguments: [
+        URLError.Code.serverCertificateUntrusted, .serverCertificateHasUnknownRoot, .serverCertificateHasBadDate,
+    ])
     func tlsErrorsAreCertificate(code: URLError.Code) async {
         let (gitlab, _) = client { _ in throw URLError(code) }
         await #expect(throws: GitLabError.certificate(fingerprint: nil)) { try await gitlab.user() }
@@ -64,14 +70,18 @@ struct GitLabClientTests {
     }
 
     @Test func tokenPageLink() {
-        #expect(GitLabClient.tokenPageURL(server: "https://git.corp/").absoluteString
+        #expect(
+            GitLabClient.tokenPageURL(server: "https://git.corp/").absoluteString
                 == "https://git.corp/-/profile/personal_access_tokens?name=Bonsai&scopes=api")
-        #expect(GitLabClient.tokenPageURL(server: "").absoluteString
+        #expect(
+            GitLabClient.tokenPageURL(server: "").absoluteString
                 == "https://gitlab.com/-/profile/personal_access_tokens?name=Bonsai&scopes=api")
     }
 
     @Test func subpathServerBuildsApiPath() async throws {
-        let base = MockURLProtocol.server { _ in (200, json(#"{"id": 1, "username": "u", "name": "U", "avatar_url": null}"#)) }
+        let base = MockURLProtocol.server { _ in
+            (200, json(#"{"id": 1, "username": "u", "name": "U", "avatar_url": null}"#))
+        }
         let server = URL(string: base.absoluteString + "/gitlab")!
         let gitlab = GitLabClient(server: server, token: "t", configuration: MockURLProtocol.configuration())
         _ = try await gitlab.user()
@@ -88,8 +98,10 @@ struct TrustTests {
     @Test func acceptsOnlyPinnedFingerprintForSameHost() {
         #expect(TrustDelegate.accepts(challengeHost: "git.corp", host: "git.corp", pinned: "AA:BB", presented: "AA:BB"))
         #expect(TrustDelegate.accepts(challengeHost: "GIT.corp", host: "git.corp", pinned: "AA:BB", presented: "AA:BB"))
-        #expect(!TrustDelegate.accepts(challengeHost: "evil.corp", host: "git.corp", pinned: "AA:BB", presented: "AA:BB"))
-        #expect(!TrustDelegate.accepts(challengeHost: "git.corp", host: "git.corp", pinned: "AA:BB", presented: "CC:DD"))
+        #expect(
+            !TrustDelegate.accepts(challengeHost: "evil.corp", host: "git.corp", pinned: "AA:BB", presented: "AA:BB"))
+        #expect(
+            !TrustDelegate.accepts(challengeHost: "git.corp", host: "git.corp", pinned: "AA:BB", presented: "CC:DD"))
         #expect(!TrustDelegate.accepts(challengeHost: "git.corp", host: "git.corp", pinned: nil, presented: "AA:BB"))
     }
 

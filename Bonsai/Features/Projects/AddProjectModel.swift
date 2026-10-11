@@ -46,10 +46,11 @@ final class AddProjectModel {
 
     func project() -> Project? {
         guard canAdd, let selected, let branch else { return nil }
-        return Project(id: selected.id, name: selected.name, path: selected.path, webURL: selected.webURL,
-                       cloneURL: selected.cloneURL, defaultBranch: selected.defaultBranch ?? branch, targetBranch: branch,
-                       setup: setup.trimmingCharacters(in: .whitespacesAndNewlines),
-                       test: test.trimmingCharacters(in: .whitespacesAndNewlines))
+        return Project(
+            id: selected.id, name: selected.name, path: selected.path, webURL: selected.webURL,
+            cloneURL: selected.cloneURL, defaultBranch: selected.defaultBranch ?? branch, targetBranch: branch,
+            setup: setup.trimmingCharacters(in: .whitespacesAndNewlines),
+            test: test.trimmingCharacters(in: .whitespacesAndNewlines))
     }
 
     func settle() async {

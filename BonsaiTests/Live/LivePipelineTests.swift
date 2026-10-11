@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @Suite(.serialized, .enabled(if: LiveGitLab.isAvailable, "local GitLab is not running"))
@@ -24,7 +25,8 @@ struct LivePipelineTests {
         for mr in mrs.sorted(by: { $0.iid < $1.iid }) {
             let effects = LivePipelineEffects(git: git, gitlab: gitlab, projectID: id)
             let recorder = RunRecorder(MRRun()) { _ in }
-            results[mr.sourceBranch] = await MRPipeline(mr: mr, project: project, effects: effects, config: config).execute(recorder)
+            results[mr.sourceBranch] = await MRPipeline(mr: mr, project: project, effects: effects, config: config)
+                .execute(recorder)
         }
 
         let behind = try #require(results["feature/behind"])
@@ -40,12 +42,20 @@ struct LivePipelineTests {
         try await git.fetch()
         #expect(try await git.revParse("origin/feature/behind") == pushed)
         #expect(try await git.behind("origin/feature/behind", base: "origin/main") == 0)
-        #expect(try await git.revParse("origin/feature/conflict") == mrs.first { $0.sourceBranch == "feature/conflict" }?.sha)
-        #expect(try await git.revParse("origin/feature/failing-test") == mrs.first { $0.sourceBranch == "feature/failing-test" }?.sha)
+        #expect(
+            try await git.revParse("origin/feature/conflict")
+                == mrs.first { $0.sourceBranch == "feature/conflict" }?.sha)
+        #expect(
+            try await git.revParse("origin/feature/failing-test")
+                == mrs.first { $0.sourceBranch == "feature/failing-test" }?.sha)
 
-        let mr = try #require(try await gitlab.mergeRequests(project: id, scope: .mine).first { $0.sourceBranch == "feature/behind" })
-        let again = await MRPipeline(mr: mr, project: project, effects: LivePipelineEffects(git: git, gitlab: gitlab, projectID: id), config: config)
-            .execute(RunRecorder(MRRun()) { _ in })
+        let mr = try #require(
+            try await gitlab.mergeRequests(project: id, scope: .mine).first { $0.sourceBranch == "feature/behind" })
+        let again = await MRPipeline(
+            mr: mr, project: project, effects: LivePipelineEffects(git: git, gitlab: gitlab, projectID: id),
+            config: config
+        )
+        .execute(RunRecorder(MRRun()) { _ in })
         #expect(again.status == .upToDate(pushed: false))
         #expect(again[.rebase].caption == .notNeeded)
         await LiveGitLab.deleteProject(id)
@@ -64,19 +74,23 @@ struct LivePipelineTests {
         try await git.clone(project.cloneURL)
         let other = GitRunner(directory: root.appendingPathComponent("other"), auth: auth)
         try await other.clone(project.cloneURL)
-        let mr = try #require(try await gitlab.mergeRequests(project: id, scope: .mine).first { $0.sourceBranch == "feature/behind" })
+        let mr = try #require(
+            try await gitlab.mergeRequests(project: id, scope: .mine).first { $0.sourceBranch == "feature/behind" })
 
         var changed = project
         changed.test = """
-        if [ ! -f /tmp/\(name).done ]; then touch /tmp/\(name).done; cd \(other.directory.path) && git checkout -q feature/behind \
-        && echo x > X.md && git add X.md && git -c user.name=O -c user.email=o@x -c commit.gpgsign=false commit -qm other \
-        && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader GIT_CONFIG_VALUE_0="Authorization: Basic $(printf 'oauth2:\(LiveGitLab.token!)' | base64)" git push -q origin feature/behind; fi; sh tests/run.sh
-        """
+            if [ ! -f /tmp/\(name).done ]; then touch /tmp/\(name).done; cd \(other.directory.path) && git checkout -q feature/behind \
+            && echo x > X.md && git add X.md && git -c user.name=O -c user.email=o@x -c commit.gpgsign=false commit -qm other \
+            && GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.extraHeader GIT_CONFIG_VALUE_0="Authorization: Basic $(printf 'oauth2:\(LiveGitLab.token!)' | base64)" git push -q origin feature/behind; fi; sh tests/run.sh
+            """
         defer { try? FileManager.default.removeItem(atPath: "/tmp/\(name).done") }
         var config = MRPipeline.Config()
         config.ciPollInterval = 3
-        let run = await MRPipeline(mr: mr, project: changed, effects: LivePipelineEffects(git: git, gitlab: gitlab, projectID: id), config: config)
-            .execute(RunRecorder(MRRun()) { _ in })
+        let run = await MRPipeline(
+            mr: mr, project: changed, effects: LivePipelineEffects(git: git, gitlab: gitlab, projectID: id),
+            config: config
+        )
+        .execute(RunRecorder(MRRun()) { _ in })
         #expect(run.attempt == 2)
         #expect(run.status == .upToDate(pushed: true))
         try await git.fetch()

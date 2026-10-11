@@ -29,7 +29,10 @@ final class GitLabClient: Sendable {
     private let session: URLSession
     private let trust: TrustDelegate
 
-    init(server: URL, token: String, trustedFingerprint: String? = nil, configuration: URLSessionConfiguration = .ephemeral) {
+    init(
+        server: URL, token: String, trustedFingerprint: String? = nil,
+        configuration: URLSessionConfiguration = .ephemeral
+    ) {
         self.server = server
         self.token = token
         configuration.timeoutIntervalForRequest = 20
@@ -73,13 +76,16 @@ final class GitLabClient: Sendable {
     func branches(project: Int, defaultBranch: String? = nil) async throws -> [GitLabBranch] {
         var all: [GitLabBranch] = []
         for page in 1...Self.branchPageLimit {
-            let batch: [GitLabBranch] = try await get("projects/\(project)/repository/branches",
-                                                      query: ["per_page": "\(Self.branchPageSize)", "page": "\(page)"])
+            let batch: [GitLabBranch] = try await get(
+                "projects/\(project)/repository/branches",
+                query: ["per_page": "\(Self.branchPageSize)", "page": "\(page)"])
             all += batch
             if batch.count < Self.branchPageSize { break }
         }
         if !all.contains(where: \.isDefault), let defaultBranch,
-           let branch: GitLabBranch = try? await get("projects/\(project)/repository/branches/\(Self.segment(defaultBranch))") {
+            let branch: GitLabBranch = try? await get(
+                "projects/\(project)/repository/branches/\(Self.segment(defaultBranch))")
+        {
             all.removeAll { $0.name == branch.name }
             all.insert(GitLabBranch(name: branch.name, isDefault: true), at: 0)
         }
@@ -87,13 +93,15 @@ final class GitLabClient: Sendable {
     }
 
     func rootFiles(project: Int, ref: String) async throws -> [String] {
-        let entries: [GitLabTreeEntry] = try await get("projects/\(project)/repository/tree", query: ["ref": ref, "per_page": "100"])
+        let entries: [GitLabTreeEntry] = try await get(
+            "projects/\(project)/repository/tree", query: ["ref": ref, "per_page": "100"])
         return entries.filter { $0.type == "blob" }.map(\.name)
     }
 
     func file(project: Int, path: String, ref: String) async throws -> String? {
         do {
-            let data = try await send(request("projects/\(project)/repository/files/\(Self.segment(path))/raw", query: ["ref": ref]))
+            let data = try await send(
+                request("projects/\(project)/repository/files/\(Self.segment(path))/raw", query: ["ref": ref]))
             return String(decoding: data, as: UTF8.self)
         } catch GitLabError.http(status: 404) {
             return nil
@@ -101,19 +109,24 @@ final class GitLabClient: Sendable {
     }
 
     func mergeRequests(project: Int, scope: MRScope) async throws -> [MergeRequest] {
-        let query = ["state": "opened", "scope": scope == .mine ? "created_by_me" : "all", "per_page": "100", "order_by": "updated_at"]
+        let query = [
+            "state": "opened", "scope": scope == .mine ? "created_by_me" : "all", "per_page": "100",
+            "order_by": "updated_at",
+        ]
         let all: [GitLabMergeRequest] = try await get("projects/\(project)/merge_requests", query: query)
         return all.filter { ($0.sourceProjectID ?? project) == project }.map(\.model)
     }
 
     func latestPipeline(project: Int, sha: String) async throws -> GitLabPipeline? {
-        let list: [GitLabPipeline] = try await get("projects/\(project)/pipelines",
-                                                   query: ["sha": sha, "order_by": "id", "sort": "desc", "per_page": "1"])
+        let list: [GitLabPipeline] = try await get(
+            "projects/\(project)/pipelines",
+            query: ["sha": sha, "order_by": "id", "sort": "desc", "per_page": "1"])
         return list.first
     }
 
     func failedJobs(project: Int, pipeline: Int) async throws -> [GitLabJob] {
-        try await get("projects/\(project)/pipelines/\(pipeline)/jobs", query: ["scope[]": "failed", "per_page": "100"])
+        try await get(
+            "projects/\(project)/pipelines/\(pipeline)/jobs", query: ["scope[]": "failed", "per_page": "100"])
     }
 
     func retryPipeline(project: Int, pipeline: Int) async throws {
@@ -176,7 +189,9 @@ final class GitLabClient: Sendable {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .custom { decoder in
             let text = try decoder.singleValueContainer().decode(String.self)
-            if let date = ISO8601DateFormatter.withFractions.date(from: text) ?? ISO8601DateFormatter.plain.date(from: text) {
+            if let date = ISO8601DateFormatter.withFractions.date(from: text)
+                ?? ISO8601DateFormatter.plain.date(from: text)
+            {
                 return date
             }
             let day = DateFormatter()
@@ -192,10 +207,11 @@ final class GitLabClient: Sendable {
     private func map(_ error: URLError) -> GitLabError {
         switch error.code {
         case .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateNotYetValid,
-             .serverCertificateHasUnknownRoot:
+            .serverCertificateHasUnknownRoot:
             return .certificate(fingerprint: trust.lastFailedFingerprint)
         case .secureConnectionFailed:
-            return trust.lastFailedFingerprint == nil ? .unreachable : .certificate(fingerprint: trust.lastFailedFingerprint)
+            return trust.lastFailedFingerprint == nil
+                ? .unreachable : .certificate(fingerprint: trust.lastFailedFingerprint)
         case .cancelled where trust.lastFailedFingerprint != nil:
             return .certificate(fingerprint: trust.lastFailedFingerprint)
         default:
@@ -209,7 +225,9 @@ final class GitLabClient: Sendable {
         if !value.contains("://") { value = "https://" + value }
         while value.hasSuffix("/") { value.removeLast() }
         if value.hasSuffix("/api/v4") { value.removeLast("/api/v4".count) }
-        guard let url = URL(string: value), let scheme = url.scheme, ["http", "https"].contains(scheme), url.host() != nil else { return nil }
+        guard let url = URL(string: value), let scheme = url.scheme, ["http", "https"].contains(scheme),
+            url.host() != nil
+        else { return nil }
         return url
     }
 

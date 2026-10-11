@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 struct GitRunnerTests {
@@ -50,28 +51,35 @@ struct GitRunnerTests {
     }
 
     @Test func authGoesThroughEnvironmentOnly() {
-        let auth = GitAuth(token: "glpat-x", caFile: URL(fileURLWithPath: "/tmp/ca.pem"), server: URL(string: "https://git.corp"))
+        let auth = GitAuth(
+            token: "glpat-x", caFile: URL(fileURLWithPath: "/tmp/ca.pem"), server: URL(string: "https://git.corp"))
         let env = auth.environment
         #expect(env["GIT_CONFIG_COUNT"] == "2")
         #expect(env["GIT_CONFIG_KEY_0"] == "http.extraHeader")
-        #expect(env["GIT_CONFIG_VALUE_0"] == "Authorization: Basic " + Data("oauth2:glpat-x".utf8).base64EncodedString())
+        #expect(
+            env["GIT_CONFIG_VALUE_0"] == "Authorization: Basic " + Data("oauth2:glpat-x".utf8).base64EncodedString())
         #expect(env["GIT_CONFIG_KEY_1"] == "http.https://git.corp/.sslCAInfo")
     }
 
     @Test func commitsWithIdentityAndIgnoresGlobalConfig() async throws {
         let repo = try await TempRepo()
         defer { repo.remove() }
-        let git = GitRunner(directory: repo.seed, identity: GitIdentity(name: "Bonsai User", email: "bonsai@example.com"))
-        #expect(try await git.run(["config", "--global", "--list"]).output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        let git = GitRunner(
+            directory: repo.seed, identity: GitIdentity(name: "Bonsai User", email: "bonsai@example.com"))
+        #expect(
+            try await git.run(["config", "--global", "--list"]).output.trimmingCharacters(in: .whitespacesAndNewlines)
+                .isEmpty)
         try repo.write("b.txt", "b\n")
         try await git.checked(["add", "-A"])
         try await git.checked(["commit", "-q", "-m", "b"])
-        #expect(try await git.checked(["log", "-1", "--format=%an <%ae>|%cn <%ce>"])
+        #expect(
+            try await git.checked(["log", "-1", "--format=%an <%ae>|%cn <%ce>"])
                 == "Bonsai User <bonsai@example.com>|Bonsai User <bonsai@example.com>")
     }
 
     @Test func emptyIdentityFieldsAreNotExported() {
-        let env = GitRunner(directory: URL(fileURLWithPath: "/tmp"), identity: GitIdentity(name: "N", email: "")).environment
+        let env = GitRunner(directory: URL(fileURLWithPath: "/tmp"), identity: GitIdentity(name: "N", email: ""))
+            .environment
         #expect(env["GIT_AUTHOR_NAME"] == "N")
         #expect(env["GIT_COMMITTER_NAME"] == "N")
         #expect(env["GIT_AUTHOR_EMAIL"] == nil)
@@ -91,7 +99,8 @@ struct ProcessRunnerTests {
     }
 
     @Test func runsInDirectoryWithEnvironment() async throws {
-        let result = try await ProcessRunner.run("/bin/sh", ["-c", "pwd; echo $BONSAI_X"], in: URL(fileURLWithPath: "/tmp"), environment: ["BONSAI_X": "42"])
+        let result = try await ProcessRunner.run(
+            "/bin/sh", ["-c", "pwd; echo $BONSAI_X"], in: URL(fileURLWithPath: "/tmp"), environment: ["BONSAI_X": "42"])
         #expect(result.output.contains("/tmp"))
         #expect(result.output.contains("42"))
     }
@@ -125,7 +134,8 @@ final class Lines: @unchecked Sendable {
 struct ProcessSignalTests {
     @Test func childStartsWithEmptySignalMask() async throws {
         let result = try await Task.detached {
-            try await ProcessRunner.run("/bin/sh", ["-c", "grep -E '^Sig(Blk|Ign)' /proc/self/status 2>/dev/null || ps -o sigmask= -p $$"])
+            try await ProcessRunner.run(
+                "/bin/sh", ["-c", "grep -E '^Sig(Blk|Ign)' /proc/self/status 2>/dev/null || ps -o sigmask= -p $$"])
         }.value
         let mask = result.output.trimmingCharacters(in: .whitespacesAndNewlines)
         #expect(mask == "0" || mask.allSatisfy { $0 == "0" } || mask.hasSuffix("00000000"), "mask: \(mask)")

@@ -44,8 +44,9 @@ final class AccountModel {
             connection = .tokenExpired
             return
         }
-        let client = GitLabClient(server: account.server, token: token, trustedFingerprint: account.trustedFingerprint,
-                                  configuration: configuration())
+        let client = GitLabClient(
+            server: account.server, token: token, trustedFingerprint: account.trustedFingerprint,
+            configuration: configuration())
         do {
             app.store.fillGitIdentity(from: try await client.user())
             connection = .connected
@@ -67,7 +68,8 @@ final class AccountModel {
         }
         let probe = GitLabClient(server: account.server, token: token, configuration: configuration())
         guard case GitLabError.certificate(let fingerprint?)? = await Self.failure(of: probe) else { return }
-        let pinned = GitLabClient(server: account.server, token: token, trustedFingerprint: fingerprint, configuration: configuration())
+        let pinned = GitLabClient(
+            server: account.server, token: token, trustedFingerprint: fingerprint, configuration: configuration())
         guard (try? await pinned.user()) != nil else { return }
         account.trustedFingerprint = fingerprint
         app.store.account = account

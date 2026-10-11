@@ -1,12 +1,14 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @MainActor
 struct AddProjectModelTests {
     nonisolated static func projectJSON(_ id: Int, _ path: String) -> String {
         let name = path.split(separator: "/").last!
-        return #"{"id": \#(id), "name": "\#(name)", "path_with_namespace": "\#(path)", "web_url": "https://x/\#(path)", "http_url_to_repo": "https://x/\#(path).git", "default_branch": "main"}"#
+        return
+            #"{"id": \#(id), "name": "\#(name)", "path_with_namespace": "\#(path)", "web_url": "https://x/\#(path)", "http_url_to_repo": "https://x/\#(path).git", "default_branch": "main"}"#
     }
 
     nonisolated static let handler: MockURLProtocol.Handler = { request in
@@ -23,15 +25,24 @@ struct AddProjectModelTests {
             return (200, json(#"[{"name": "develop", "default": false}, {"name": "main", "default": true}]"#))
         }
         if path.hasSuffix("/repository/tree") {
-            if path.contains("/projects/1/") { return (200, json(#"[{"name": "Makefile", "type": "blob"}, {"name": "scripts", "type": "tree"}]"#)) }
-            if path.contains("/projects/2/") { return (200, json(#"[{"name": "package.json", "type": "blob"}, {"name": "package-lock.json", "type": "blob"}]"#)) }
+            if path.contains("/projects/1/") {
+                return (200, json(#"[{"name": "Makefile", "type": "blob"}, {"name": "scripts", "type": "tree"}]"#))
+            }
+            if path.contains("/projects/2/") {
+                return (
+                    200,
+                    json(#"[{"name": "package.json", "type": "blob"}, {"name": "package-lock.json", "type": "blob"}]"#)
+                )
+            }
             return (200, json("[]"))
         }
         if path.contains("/projects/1/repository/files/Makefile/raw") { return (200, Data("test:\n\ttrue\n".utf8)) }
         if url.absoluteString.contains("/projects/1/repository/files/scripts%2Fsetup.sh/raw") {
             return (200, Data("#!/bin/sh".utf8))
         }
-        if path.contains("/projects/2/repository/files/package.json/raw") { return (200, Data(#"{"scripts": {"test": "jest"}}"#.utf8)) }
+        if path.contains("/projects/2/repository/files/package.json/raw") {
+            return (200, Data(#"{"scripts": {"test": "jest"}}"#.utf8))
+        }
         return (404, Data())
     }
 

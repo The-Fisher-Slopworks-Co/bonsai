@@ -6,12 +6,15 @@ enum Snapshot {
     static var enabled: Bool { ProcessInfo.processInfo.environment["SNAPSHOTS"] == "1" }
 
     static var directory: URL {
-        URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
+            .deletingLastPathComponent()
             .appendingPathComponent("build/shots")
     }
 
-    static func save<V: View>(_ name: String, size: CGSize? = nil, appearance: NSAppearance.Name = .aqua, wait: Duration = .milliseconds(800),
-                              sheet: (some View)? = Optional<EmptyView>.none, _ view: V) async throws {
+    static func save<V: View>(
+        _ name: String, size: CGSize? = nil, appearance: NSAppearance.Name = .aqua, wait: Duration = .milliseconds(800),
+        sheet: (some View)? = Optional<EmptyView>.none, _ view: V
+    ) async throws {
         let controller = NSHostingController(rootView: view)
         if size == nil { controller.sizingOptions = [.preferredContentSize] }
         let window = NSWindow(contentViewController: controller)

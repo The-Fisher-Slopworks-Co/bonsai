@@ -39,8 +39,10 @@ struct GeneralSettings: View {
                 LabeledContent(L("settings.parallel")) {
                     HStack(spacing: 6) {
                         Text(verbatim: "\(store.settings.parallel)").monospacedDigit()
-                        Stepper(L("settings.parallel"), value: $store.settings.parallel, in: Bonsai.Settings.parallelRange)
-                            .labelsHidden()
+                        Stepper(
+                            L("settings.parallel"), value: $store.settings.parallel, in: Bonsai.Settings.parallelRange
+                        )
+                        .labelsHidden()
                     }
                 }
             }
@@ -140,8 +142,11 @@ struct ClaudeSettingsView: View {
                     LabeledContent(L("settings.attempts")) {
                         HStack(spacing: 6) {
                             Text(verbatim: "\(store.settings.claude.attempts)").monospacedDigit()
-                            Stepper(L("settings.attempts"), value: $store.settings.claude.attempts, in: Bonsai.Settings.attemptsRange)
-                                .labelsHidden()
+                            Stepper(
+                                L("settings.attempts"), value: $store.settings.claude.attempts,
+                                in: Bonsai.Settings.attemptsRange
+                            )
+                            .labelsHidden()
                         }
                     }
                 } header: {
@@ -150,10 +155,12 @@ struct ClaudeSettingsView: View {
                     Text(verbatim: L("settings.perProjectHint")).foregroundStyle(.secondary)
                 }
                 Section {
-                    TextEditor(text: Binding(
-                        get: { store.settings.claude.rules ?? L("settings.rulesDefault") },
-                        set: { store.settings.claude.rules = $0 == L("settings.rulesDefault") ? nil : $0 }
-                    ))
+                    TextEditor(
+                        text: Binding(
+                            get: { store.settings.claude.rules ?? L("settings.rulesDefault") },
+                            set: { store.settings.claude.rules = $0 == L("settings.rulesDefault") ? nil : $0 }
+                        )
+                    )
                     .font(.system(size: 12, design: .monospaced))
                     .frame(height: 96)
                     .scrollContentBackground(.hidden)
@@ -220,11 +227,21 @@ struct NotificationSettingsView: View {
         @Bindable var store = app.store
         Form {
             Section(L("settings.notifyWhen")) {
-                row(L("settings.nClaudeReady"), nil, icon: "ellipsis.circle.fill", color: .purple, isOn: $store.settings.notifications.claudeReady)
-                row(L("settings.nNeedsMe"), L("settings.nNeedsMeSub"), icon: "xmark.circle.fill", color: .red, isOn: $store.settings.notifications.needsMe)
-                row(L("settings.nAuth"), nil, icon: "xmark.circle.fill", color: .orange, isOn: $store.settings.notifications.noConnection)
-                row(L("settings.nOk"), nil, icon: "checkmark.circle.fill", color: .green, isOn: $store.settings.notifications.updated)
-                row(L("settings.nStart"), nil, icon: "play.circle.fill", color: .blue, isOn: $store.settings.notifications.started)
+                row(
+                    L("settings.nClaudeReady"), nil, icon: "ellipsis.circle.fill", color: .purple,
+                    isOn: $store.settings.notifications.claudeReady)
+                row(
+                    L("settings.nNeedsMe"), L("settings.nNeedsMeSub"), icon: "xmark.circle.fill", color: .red,
+                    isOn: $store.settings.notifications.needsMe)
+                row(
+                    L("settings.nAuth"), nil, icon: "xmark.circle.fill", color: .orange,
+                    isOn: $store.settings.notifications.noConnection)
+                row(
+                    L("settings.nOk"), nil, icon: "checkmark.circle.fill", color: .green,
+                    isOn: $store.settings.notifications.updated)
+                row(
+                    L("settings.nStart"), nil, icon: "play.circle.fill", color: .blue,
+                    isOn: $store.settings.notifications.started)
             }
             Section {
                 Toggle(L("settings.quiet"), isOn: $store.settings.notifications.quietWhileWindowOpen)
@@ -245,7 +262,8 @@ struct NotificationSettingsView: View {
         return text
     }
 
-    private func row(_ title: String, _ subtitle: String?, icon: String, color: Color, isOn: Binding<Bool>) -> some View {
+    private func row(_ title: String, _ subtitle: String?, icon: String, color: Color, isOn: Binding<Bool>) -> some View
+    {
         Toggle(isOn: isOn) {
             Label {
                 VStack(alignment: .leading, spacing: 1) {
@@ -295,12 +313,17 @@ struct AccountSettings: View {
                     LabeledContent(L("settings.token")) {
                         HStack(spacing: 8) {
                             if let text = model?.tokenText {
-                                Text(verbatim: text).foregroundStyle(model?.connection == .tokenExpired ? .red : .secondary)
+                                Text(verbatim: text).foregroundStyle(
+                                    model?.connection == .tokenExpired ? .red : .secondary)
                             }
                             Button(L("settings.changeToken")) { app.changeToken() }
                         }
                     }
-                    Toggle(isOn: Binding(get: { account.trustedFingerprint != nil }, set: { on in Task { await model?.setTrust(on) } })) {
+                    Toggle(
+                        isOn: Binding(
+                            get: { account.trustedFingerprint != nil },
+                            set: { on in Task { await model?.setTrust(on) } })
+                    ) {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(verbatim: L("settings.tls"))
                             Text(verbatim: L("settings.tlsHint"))
@@ -310,10 +333,16 @@ struct AccountSettings: View {
                     }
                 }
                 Section(L("settings.gitAuthor")) {
-                    TextField(L("settings.gitName"), text: Binding(get: { app.store.settings.gitIdentity.name },
-                                                                    set: { app.store.settings.gitIdentity.name = $0 }))
-                    TextField(L("settings.gitEmail"), text: Binding(get: { app.store.settings.gitIdentity.email },
-                                                                     set: { app.store.settings.gitIdentity.email = $0 }))
+                    TextField(
+                        L("settings.gitName"),
+                        text: Binding(
+                            get: { app.store.settings.gitIdentity.name },
+                            set: { app.store.settings.gitIdentity.name = $0 }))
+                    TextField(
+                        L("settings.gitEmail"),
+                        text: Binding(
+                            get: { app.store.settings.gitIdentity.email },
+                            set: { app.store.settings.gitIdentity.email = $0 }))
                 }
                 Section {
                     Button(L("settings.signOut"), role: .destructive) { app.signOut() }

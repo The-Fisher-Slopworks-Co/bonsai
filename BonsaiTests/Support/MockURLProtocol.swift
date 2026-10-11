@@ -35,8 +35,9 @@ final class MockURLProtocol: URLProtocol, @unchecked Sendable {
         do {
             guard let handler else { throw URLError(.cannotFindHost) }
             let (status, data) = try handler(request)
-            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1",
-                                           headerFields: ["Content-Type": "application/json"])!
+            let response = HTTPURLResponse(
+                url: request.url!, statusCode: status, httpVersion: "HTTP/1.1",
+                headerFields: ["Content-Type": "application/json"])!
             client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
             client?.urlProtocol(self, didLoad: data)
             client?.urlProtocolDidFinishLoading(self)

@@ -15,7 +15,8 @@ final class Store {
 
     init(directory: URL = Store.defaultDirectory, workDirectory: URL? = nil, keychain: Keychain = Keychain()) {
         self.directory = directory
-        self.workDirectory = workDirectory ?? (directory == Self.defaultDirectory ? Self.defaultWorkDirectory : directory)
+        self.workDirectory =
+            workDirectory ?? (directory == Self.defaultDirectory ? Self.defaultWorkDirectory : directory)
         self.keychain = keychain
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         account = Self.read(Account.self, from: directory.appendingPathComponent("account.json"))
@@ -59,7 +60,7 @@ final class Store {
     }
 
     var token: String? {
-        get { account.flatMap { keychain.read(account: $0.server.absoluteString) } }
+        account.flatMap { keychain.read(account: $0.server.absoluteString) }
     }
 
     func fillGitIdentity(from user: GitLabUser) {

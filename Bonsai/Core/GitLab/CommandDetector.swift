@@ -7,25 +7,33 @@ struct DetectedCommands: Equatable, Sendable {
 }
 
 enum CommandDetector {
-    static func detect(files: [String], read: @Sendable (String) async throws -> String?) async throws -> DetectedCommands? {
+    static func detect(files: [String], read: @Sendable (String) async throws -> String?) async throws
+        -> DetectedCommands?
+    {
         let names = Set(files)
         let setupScript = names.isEmpty ? nil : try await setupScriptPath(read: read)
 
         if names.contains("Makefile"), let makefile = try await read("Makefile") {
             let targets = makeTargets(makefile)
             if targets.contains("test") {
-                let setup = setupScript ?? ["setup", "deps", "install", "bootstrap"].first(where: targets.contains).map { "make \($0)" } ?? ""
+                let setup =
+                    setupScript ?? ["setup", "deps", "install", "bootstrap"].first(where: targets.contains).map {
+                        "make \($0)"
+                    } ?? ""
                 return DetectedCommands(setup: setup, test: "make test", source: "Makefile")
             }
         }
         if names.contains("package.json"), let package = try await read("package.json"), hasNpmTest(package) {
             if names.contains("pnpm-lock.yaml") {
-                return DetectedCommands(setup: setupScript ?? "pnpm install --frozen-lockfile", test: "pnpm test", source: "package.json")
+                return DetectedCommands(
+                    setup: setupScript ?? "pnpm install --frozen-lockfile", test: "pnpm test", source: "package.json")
             }
             if names.contains("yarn.lock") {
-                return DetectedCommands(setup: setupScript ?? "yarn install --frozen-lockfile", test: "yarn test", source: "package.json")
+                return DetectedCommands(
+                    setup: setupScript ?? "yarn install --frozen-lockfile", test: "yarn test", source: "package.json")
             }
-            let install = names.contains("package-lock.json") || names.contains("npm-shrinkwrap.json") ? "npm ci" : "npm install"
+            let install =
+                names.contains("package-lock.json") || names.contains("npm-shrinkwrap.json") ? "npm ci" : "npm install"
             return DetectedCommands(setup: setupScript ?? install, test: "npm test", source: "package.json")
         }
         if names.contains("Cargo.toml") {
@@ -54,7 +62,8 @@ enum CommandDetector {
             guard let colon = line.firstIndex(of: ":") else { continue }
             let after = line[line.index(after: colon)...]
             if after.hasPrefix("=") { continue }
-            for name in line[..<colon].split(separator: " ") where !name.contains("$") && !name.contains("%") && !name.contains("=") {
+            for name in line[..<colon].split(separator: " ")
+            where !name.contains("$") && !name.contains("%") && !name.contains("=") {
                 targets.insert(String(name))
             }
         }
@@ -63,9 +72,10 @@ enum CommandDetector {
 
     static func hasNpmTest(_ json: String) -> Bool {
         guard let data = json.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let scripts = object["scripts"] as? [String: Any],
-              let test = scripts["test"] as? String else { return false }
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let scripts = object["scripts"] as? [String: Any],
+            let test = scripts["test"] as? String
+        else { return false }
         return !test.contains("no test specified")
     }
 }

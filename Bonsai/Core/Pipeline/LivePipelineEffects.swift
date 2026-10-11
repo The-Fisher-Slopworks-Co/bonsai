@@ -20,10 +20,12 @@ struct LivePipelineEffects: PipelineEffects {
 
     func checkout(_ branch: String, log: @escaping LogSink) async throws {
         if FileManager.default.fileExists(atPath: git.directory.appendingPathComponent(".git/rebase-merge").path)
-            || FileManager.default.fileExists(atPath: git.directory.appendingPathComponent(".git/rebase-apply").path) {
+            || FileManager.default.fileExists(atPath: git.directory.appendingPathComponent(".git/rebase-apply").path)
+        {
             try await git.run(["rebase", "--abort"])
         }
-        try await git.checked(["checkout", "--quiet", "--force", "-B", branch, "origin/\(branch)"], onLine: output(log))
+        try await git.checked(
+            ["checkout", "--quiet", "--force", "-B", branch, "origin/\(branch)"], onLine: output(log))
         try await git.checked(["clean", "-fdq"])
     }
 
@@ -52,11 +54,13 @@ struct LivePipelineEffects: PipelineEffects {
     }
 
     func push(_ branch: String, expected: String, log: @escaping LogSink) async throws -> PushResult {
-        let result = try await git.run(["push", "--force-with-lease=refs/heads/\(branch):\(expected)", "origin", "HEAD:refs/heads/\(branch)"],
-                                       onLine: output(log))
+        let result = try await git.run(
+            ["push", "--force-with-lease=refs/heads/\(branch):\(expected)", "origin", "HEAD:refs/heads/\(branch)"],
+            onLine: output(log))
         if result.succeeded { return .ok }
         if Self.isLeaseRejection(result.output) { return .rejected }
-        let last = result.output.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
+        let last =
+            result.output.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
             .last { !$0.isEmpty && !$0.hasPrefix("error: failed to push") } ?? "git push"
         return .failed(last)
     }
@@ -71,7 +75,9 @@ struct LivePipelineEffects: PipelineEffects {
     }
 
     func failedJob(pipeline: Int) async throws -> CIJob? {
-        try await gitlab.failedJobs(project: projectID, pipeline: pipeline).first.map { CIJob(id: $0.id, name: $0.name) }
+        try await gitlab.failedJobs(project: projectID, pipeline: pipeline).first.map {
+            CIJob(id: $0.id, name: $0.name)
+        }
     }
 
     func sleep(_ seconds: TimeInterval) async throws {

@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @MainActor
@@ -8,9 +9,13 @@ struct AccountModelTests {
     let keychain = Keychain(service: "dev.txssu.Bonsai.tests.\(UUID().uuidString)")
 
     func model(status: Int, expires: Date? = nil, pinned: String? = nil) throws -> (AccountModel, AppModel) {
-        let server = MockURLProtocol.server { _ in (status, json(#"{"id": 1, "username": "u", "name": "U", "avatar_url": null}"#)) }
+        let server = MockURLProtocol.server { _ in
+            (status, json(#"{"id": 1, "username": "u", "name": "U", "avatar_url": null}"#))
+        }
         let store = Store(directory: dir, keychain: keychain)
-        try store.signIn(Account(server: server, username: "u", name: "U", tokenExpiresAt: expires, trustedFingerprint: pinned), token: "t")
+        try store.signIn(
+            Account(server: server, username: "u", name: "U", tokenExpiresAt: expires, trustedFingerprint: pinned),
+            token: "t")
         let app = AppModel(store: store)
         return (AccountModel(app: app, configuration: { MockURLProtocol.configuration() }), app)
     }

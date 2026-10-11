@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @MainActor
@@ -27,7 +28,8 @@ struct StoreTests {
 
     @Test func gitIdentityFilledFromGitLabWithoutOverwriting() {
         let store = Store(directory: dir, keychain: keychain)
-        store.fillGitIdentity(from: GitLabUser(id: 1, username: "e", name: "Eugene", email: "e@corp", commitEmail: "commit@corp"))
+        store.fillGitIdentity(
+            from: GitLabUser(id: 1, username: "e", name: "Eugene", email: "e@corp", commitEmail: "commit@corp"))
         #expect(store.settings.gitIdentity == GitIdentity(name: "Eugene", email: "commit@corp"))
         store.settings.gitIdentity.name = "Typed"
         store.settings.gitIdentity.email = ""
@@ -39,9 +41,12 @@ struct StoreTests {
         let store = Store(directory: dir, keychain: keychain)
         store.settings.parallel = 5
         store.settings.interval = .manual
-        store.projects = [Project(id: 7, name: "app", path: "g/app", webURL: URL(string: "https://x/g/app")!,
-                                  cloneURL: URL(string: "https://x/g/app.git")!, defaultBranch: "main",
-                                  targetBranch: "main", setup: "", test: "make test")]
+        store.projects = [
+            Project(
+                id: 7, name: "app", path: "g/app", webURL: URL(string: "https://x/g/app")!,
+                cloneURL: URL(string: "https://x/g/app.git")!, defaultBranch: "main",
+                targetBranch: "main", setup: "", test: "make test")
+        ]
         let account = Account(server: URL(string: "https://x")!, username: "me", name: "Me")
         try store.signIn(account, token: "glpat-secret")
 

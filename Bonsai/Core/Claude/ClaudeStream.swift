@@ -20,8 +20,9 @@ struct ClaudeStreamParser {
 
     func parse(_ line: String) -> [ClaudeEvent] {
         guard let data = line.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let type = object["type"] as? String else { return [] }
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let type = object["type"] as? String
+        else { return [] }
         switch type {
         case "system":
             if object["subtype"] as? String == "init", let id = object["session_id"] as? String {
@@ -52,7 +53,9 @@ struct ClaudeStreamParser {
             return text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
                 .map { .log(LogLine(text: $0, kind: .claude)) }
         case "tool_use":
-            guard let name = block["name"] as? String, let line = toolLine(name, block["input"] as? [String: Any] ?? [:]) else { return [] }
+            guard let name = block["name"] as? String,
+                let line = toolLine(name, block["input"] as? [String: Any] ?? [:])
+            else { return [] }
             return [.log(LogLine(text: line, kind: .tool))]
         default:
             return []
@@ -101,14 +104,21 @@ struct ClaudeStreamParser {
             return nil
         }
         guard !text.hasPrefix("The file "), !text.contains("has been updated successfully"),
-              !text.hasPrefix("Structured output"), !looksLikeFileListing(text) else { return nil }
-        guard let last = text.split(separator: "\n").map({ $0.trimmingCharacters(in: .whitespaces) }).last(where: { !$0.isEmpty }) else { return nil }
+            !text.hasPrefix("Structured output"), !looksLikeFileListing(text)
+        else { return nil }
+        guard
+            let last = text.split(separator: "\n").map({ $0.trimmingCharacters(in: .whitespaces) }).last(where: {
+                !$0.isEmpty
+            })
+        else { return nil }
         let isError = block["is_error"] as? Bool ?? false
         return .log(LogLine(text: String(last.prefix(300)), kind: isError ? .error : .ok))
     }
 
     private func looksLikeFileListing(_ text: String) -> Bool {
-        text.split(separator: "\n").prefix(3).allSatisfy { $0.range(of: #"^\s*\d+[→\t]"#, options: .regularExpression) != nil } && !text.isEmpty
+        text.split(separator: "\n").prefix(3).allSatisfy {
+            $0.range(of: #"^\s*\d+[→\t]"#, options: .regularExpression) != nil
+        } && !text.isEmpty
     }
 
     private func result(_ object: [String: Any]) -> ClaudeResult {
@@ -118,10 +128,11 @@ struct ClaudeStreamParser {
             if let path = file["path"] as? String, let note = file["note"] as? String { notes[path] = note }
         }
         let isError = (object["is_error"] as? Bool ?? false) || object["subtype"] as? String != "success"
-        return ClaudeResult(sessionID: object["session_id"] as? String, isError: isError,
-                            summary: (structured["summary"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-                            commitMessage: (structured["commit"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-                            notes: notes, errorText: isError ? object["result"] as? String : nil)
+        return ClaudeResult(
+            sessionID: object["session_id"] as? String, isError: isError,
+            summary: (structured["summary"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+            commitMessage: (structured["commit"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
+            notes: notes, errorText: isError ? object["result"] as? String : nil)
     }
 
     private func relative(_ path: String) -> String {

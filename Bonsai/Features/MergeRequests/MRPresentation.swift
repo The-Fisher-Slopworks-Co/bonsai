@@ -202,7 +202,9 @@ struct MRPresentation: Equatable {
             icon = base.icon
             tone = base.tone
             bannerTitle = base.bannerTitle
-            bannerBody = L(fix.phase == .rejected ? "fix.bn.rejected" : fix.phase == .stopped ? "fix.bn.stopped" : "fix.bn.reverted")
+            bannerBody = L(
+                fix.phase == .rejected
+                    ? "fix.bn.rejected" : fix.phase == .stopped ? "fix.bn.stopped" : "fix.bn.reverted")
             actions = base.actions
             canFix = base.canFix
         }
@@ -251,10 +253,12 @@ struct MRPresentation: Equatable {
         case .pipeline: L("mr.sub.pipeline")
         case .none: ""
         case .claudeAttempt:
-            numbers(stage.detail).count == 2 ? L("fix.claudeRun", numbers(stage.detail)[0], numbers(stage.detail)[1]) : ""
+            numbers(stage.detail).count == 2
+                ? L("fix.claudeRun", numbers(stage.detail)[0], numbers(stage.detail)[1]) : ""
         case .claudeChanged:
             numbers(stage.detail).count == 3
-                ? L("fix.files", numbers(stage.detail)[0]) + " · " + stat(added: numbers(stage.detail)[1], removed: numbers(stage.detail)[2]) : ""
+                ? L("fix.files", numbers(stage.detail)[0]) + " · "
+                    + stat(added: numbers(stage.detail)[1], removed: numbers(stage.detail)[2]) : ""
         case .claudeResolved: L("fix.claudeResolved", Int(stage.detail) ?? 0)
         case .claudeFailed: L("fix.claudeFail", Int(stage.detail) ?? 0)
         case .afterFix: L("fix.sub.afterFix", stage.detail)
@@ -262,7 +266,8 @@ struct MRPresentation: Equatable {
     }
 
     static func stat(added: Int, removed: Int) -> String {
-        ClaudeStreamParser.stat(added: added, removed: removed).trimmingCharacters(in: CharacterSet(charactersIn: " ()"))
+        ClaudeStreamParser.stat(added: added, removed: removed).trimmingCharacters(
+            in: CharacterSet(charactersIn: " ()"))
     }
 
     private static func numbers(_ detail: String) -> [Int] {
@@ -284,7 +289,9 @@ struct MRPresentation: Equatable {
     }
 
     static func displayKind(_ line: LogLine, stageState: StageState) -> LogLine.Kind {
-        if line.kind == .output && stageState == .failed && line.text.range(of: #"FAIL|failed|rejected|error|Error|CONFLICT"#, options: .regularExpression) != nil {
+        if line.kind == .output && stageState == .failed
+            && line.text.range(of: #"FAIL|failed|rejected|error|Error|CONFLICT"#, options: .regularExpression) != nil
+        {
             return .error
         }
         return line.kind
@@ -298,9 +305,13 @@ struct MRPresentation: Equatable {
     }
 
     static func groups(_ items: [(MergeRequest, MRRun)]) -> [(title: String, items: [(MergeRequest, MRRun)])] {
-        let titled: [(Group, String)] = [(.decide, L("fix.grpDecide")), (.working, L("mr.grpWorking")),
-                                         (.attention, L("mr.grpAttention")), (.fine, L("mr.grpFine"))]
-        return titled.map { group, title in (title, items.filter { MRPresentation($0.1).group == group }) }.filter { !$0.1.isEmpty }
+        let titled: [(Group, String)] = [
+            (.decide, L("fix.grpDecide")), (.working, L("mr.grpWorking")),
+            (.attention, L("mr.grpAttention")), (.fine, L("mr.grpFine")),
+        ]
+        return titled.map { group, title in (title, items.filter { MRPresentation($0.1).group == group }) }.filter {
+            !$0.1.isEmpty
+        }
     }
 
     static func subtitle(project: Project, count: Int, checkedAt: Date?, now: Date = Date()) -> String {

@@ -7,7 +7,8 @@ protocol FixEffects: Sendable {
     func continueRebase(log: @escaping LogSink) async throws -> RebaseResult
     func read(_ path: String) -> String?
     func run(_ command: String, log: @escaping LogSink) async throws -> (ok: Bool, output: String)
-    func claude(prompt: String, tools: [String], resume: String?, onEvent: @escaping @Sendable (ClaudeEvent) -> Void) async throws -> ClaudeResult
+    func claude(prompt: String, tools: [String], resume: String?, onEvent: @escaping @Sendable (ClaudeEvent) -> Void)
+        async throws -> ClaudeResult
     func diff() async throws -> String
     var isDirty: Bool { get async throws }
     func commit(_ message: String, amend: Bool) async throws
@@ -34,25 +35,30 @@ struct LiveFixEffects: FixEffects {
     func prepare(branch: String, log: @escaping LogSink) async throws {
         await discard()
         try await clone.fetch()
-        try FileManager.default.createDirectory(at: worktree.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try await clone.checked(["worktree", "add", "--force", "--detach", worktree.path, "origin/\(branch)"], onLine: output(log))
+        try FileManager.default.createDirectory(
+            at: worktree.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try await clone.checked(
+            ["worktree", "add", "--force", "--detach", worktree.path, "origin/\(branch)"], onLine: output(log))
     }
 
     func rebase(onto ref: String, log: @escaping LogSink) async throws -> RebaseResult {
         let result = try await git.run(["rebase", ref], onLine: output(log))
         if result.succeeded { return .ok }
-        return try await conflicts(or: GitError(command: "git rebase \(ref)", status: result.status, output: result.output))
+        return try await conflicts(
+            or: GitError(command: "git rebase \(ref)", status: result.status, output: result.output))
     }
 
     func continueRebase(log: @escaping LogSink) async throws -> RebaseResult {
         try await git.checked(["add", "-A"])
         let result = try await git.run(["-c", "core.editor=true", "rebase", "--continue"], onLine: output(log))
         if result.succeeded { return .ok }
-        return try await conflicts(or: GitError(command: "git rebase --continue", status: result.status, output: result.output))
+        return try await conflicts(
+            or: GitError(command: "git rebase --continue", status: result.status, output: result.output))
     }
 
     private func conflicts(or error: GitError) async throws -> RebaseResult {
-        let files = try await git.checked(["diff", "--name-only", "--diff-filter=U"]).split(separator: "\n").map(String.init)
+        let files = try await git.checked(["diff", "--name-only", "--diff-filter=U"]).split(separator: "\n").map(
+            String.init)
         guard !files.isEmpty else { throw error }
         return .conflict(files: files)
     }
@@ -66,15 +72,21 @@ struct LiveFixEffects: FixEffects {
         return (result.succeeded, result.output)
     }
 
-    func claude(prompt: String, tools: [String], resume: String?, onEvent: @escaping @Sendable (ClaudeEvent) -> Void) async throws -> ClaudeResult {
-        let request = ClaudeRequest(executable: claudePath, directory: worktree, prompt: prompt, allowedTools: tools,
-                                    schema: FixPrompt.schema, resume: resume)
+    func claude(prompt: String, tools: [String], resume: String?, onEvent: @escaping @Sendable (ClaudeEvent) -> Void)
+        async throws -> ClaudeResult
+    {
+        let request = ClaudeRequest(
+            executable: claudePath, directory: worktree, prompt: prompt, allowedTools: tools,
+            schema: FixPrompt.schema, resume: resume)
         return try await runner.run(request, onEvent: onEvent)
     }
 
     func diff() async throws -> String {
         try await git.checked(["add", "-A", "-N"])
-        return try await git.run(["-c", "diff.noprefix=false", "-c", "diff.mnemonicPrefix=false", "diff", "--no-color", "--no-ext-diff", "--src-prefix=a/", "--dst-prefix=b/", "HEAD"]).output
+        return try await git.run([
+            "-c", "diff.noprefix=false", "-c", "diff.mnemonicPrefix=false", "diff", "--no-color", "--no-ext-diff",
+            "--src-prefix=a/", "--dst-prefix=b/", "HEAD",
+        ]).output
     }
 
     var isDirty: Bool {
@@ -95,8 +107,9 @@ struct LiveFixEffects: FixEffects {
     }
 
     func push(_ branch: String, sha: String, expected: String, log: @escaping LogSink) async throws -> PushResult {
-        let result = try await clone.run(["push", "--force-with-lease=refs/heads/\(branch):\(expected)", "origin", "\(sha):refs/heads/\(branch)"],
-                                       onLine: output(log))
+        let result = try await clone.run(
+            ["push", "--force-with-lease=refs/heads/\(branch):\(expected)", "origin", "\(sha):refs/heads/\(branch)"],
+            onLine: output(log))
         if result.succeeded { return .ok }
         if LivePipelineEffects.isLeaseRejection(result.output) { return .rejected }
         return .failed(result.output.split(separator: "\n").last.map(String.init) ?? "git push")
@@ -112,7 +125,9 @@ struct LiveFixEffects: FixEffects {
     }
 
     func failedJob(pipeline: Int) async throws -> CIJob? {
-        try await gitlab.failedJobs(project: projectID, pipeline: pipeline).first.map { CIJob(id: $0.id, name: $0.name) }
+        try await gitlab.failedJobs(project: projectID, pipeline: pipeline).first.map {
+            CIJob(id: $0.id, name: $0.name)
+        }
     }
 
     func discard() async {

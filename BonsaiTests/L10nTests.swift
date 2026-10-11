@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 struct L10nTests {
@@ -13,7 +14,10 @@ struct L10nTests {
         #expect(L("connect.title", bundle: try bundle("ru"), []) == "Подключение к GitLab")
     }
 
-    @Test(arguments: [(1, "Отстаёт на 1 коммит"), (3, "Отстаёт на 3 коммита"), (5, "Отстаёт на 5 коммитов"), (21, "Отстаёт на 21 коммит")])
+    @Test(arguments: [
+        (1, "Отстаёт на 1 коммит"), (3, "Отстаёт на 3 коммита"), (5, "Отстаёт на 5 коммитов"),
+        (21, "Отстаёт на 21 коммит"),
+    ])
     func russianPlurals(n: Int, text: String) throws {
         #expect(L("mr.behind", bundle: try bundle("ru"), [n]) == text)
     }

@@ -22,8 +22,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     func handle(_ change: Workspace.StatusChange) {
         guard let note = NotificationRules.note(for: change, settings: settings), !quiet else { return }
-        post(title: L(note.title), body: "\(change.mr.title) · \(change.project.name)",
-             info: ["project": note.projectID, "mr": note.mrID], id: "\(note.mrID)-\(note.title)")
+        post(
+            title: L(note.title), body: "\(change.mr.title) · \(change.project.name)",
+            info: ["project": note.projectID, "mr": note.mrID], id: "\(note.mrID)-\(note.title)")
     }
 
     private func observeConnection() {
@@ -33,7 +34,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             Task { @MainActor in self?.observeConnection() }
         }
         if lost && wasConnected && settings.noConnection && !quiet {
-            post(title: L("notify.noConnection"), body: app.store.account?.server.host() ?? "", info: [:], id: "connection")
+            post(
+                title: L("notify.noConnection"), body: app.store.account?.server.host() ?? "", info: [:],
+                id: "connection")
         }
         wasConnected = !lost
     }
@@ -47,15 +50,20 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse
+    ) async {
         let info = response.notification.request.content.userInfo
         let project = info["project"] as? Int
         let mr = info["mr"] as? String
         await MainActor.run { app.showMain(project: project, mr: mr) }
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async
-        -> UNNotificationPresentationOptions {
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter, willPresent notification: UNNotification
+    ) async
+        -> UNNotificationPresentationOptions
+    {
         [.banner, .sound]
     }
 }

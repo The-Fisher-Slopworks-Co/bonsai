@@ -35,8 +35,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     private func model() -> MenuBarModel {
-        MenuBarModel(items: app.workspace.allMergeRequests.map { ($0.0, app.workspace.run($0.0)) },
-                     isChecking: app.workspace.isChecking, lastCheck: app.workspace.lastCheck, pausedUntil: app.scheduler.pausedUntil)
+        MenuBarModel(
+            items: app.workspace.allMergeRequests.map { ($0.0, app.workspace.run($0.0)) },
+            isChecking: app.workspace.isChecking, lastCheck: app.workspace.lastCheck,
+            pausedUntil: app.scheduler.pausedUntil)
     }
 
     private func observe() {
@@ -71,10 +73,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let model = model()
 
         let header = NSMenuItem()
-        header.view = NSHostingView(rootView: MenuHeader(text: model.headerText) { [weak self] in
-            self?.menu.cancelTracking()
-            self?.app.scheduler.checkNow()
-        })
+        header.view = NSHostingView(
+            rootView: MenuHeader(text: model.headerText) { [weak self] in
+                self?.menu.cancelTracking()
+                self?.app.scheduler.checkNow()
+            })
         header.view?.frame.size = header.view?.fittingSize ?? .zero
         menu.addItem(header)
 
@@ -111,8 +114,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         item.target = self
         item.representedObject = entry
         let text = NSMutableAttributedString(string: entry.title, attributes: [.font: NSFont.menuFont(ofSize: 13)])
-        text.append(NSAttributedString(string: "  !\(entry.iid)", attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
-        text.append(NSAttributedString(string: "\n" + entry.status, attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: Self.color(entry.tone)]))
+        text.append(
+            NSAttributedString(
+                string: "  !\(entry.iid)",
+                attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
+        text.append(
+            NSAttributedString(
+                string: "\n" + entry.status,
+                attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: Self.color(entry.tone)]))
         item.attributedTitle = text
         item.image = Self.icon(entry.icon, size: 14)
         return item
@@ -129,16 +138,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     static func icon(_ icon: MRPresentation.Icon, size: CGFloat) -> NSImage? {
-        let (name, color): (String, NSColor) = switch icon {
-        case .spinner: ("arrow.triangle.2.circlepath.circle.fill", .controlAccentColor)
-        case .check: ("checkmark.circle.fill", .systemGreen)
-        case .cross: ("xmark.circle.fill", .systemRed)
-        case .down: ("arrow.down.circle.fill", .systemOrange)
-        case .redo: ("arrow.clockwise.circle.fill", .systemOrange)
-        case .none: ("circle", .tertiaryLabelColor)
-        case .claudeSpinner: ("arrow.triangle.2.circlepath.circle.fill", .systemPurple)
-        case .dots: ("ellipsis.circle.fill", .systemPurple)
-        }
+        let (name, color): (String, NSColor) =
+            switch icon {
+            case .spinner: ("arrow.triangle.2.circlepath.circle.fill", .controlAccentColor)
+            case .check: ("checkmark.circle.fill", .systemGreen)
+            case .cross: ("xmark.circle.fill", .systemRed)
+            case .down: ("arrow.down.circle.fill", .systemOrange)
+            case .redo: ("arrow.clockwise.circle.fill", .systemOrange)
+            case .none: ("circle", .tertiaryLabelColor)
+            case .claudeSpinner: ("arrow.triangle.2.circlepath.circle.fill", .systemPurple)
+            case .dots: ("ellipsis.circle.fill", .systemPurple)
+            }
         let config = NSImage.SymbolConfiguration(pointSize: size, weight: .regular)
             .applying(.init(paletteColors: [.white, color]))
         return NSImage(systemSymbolName: name, accessibilityDescription: nil)?.withSymbolConfiguration(config)

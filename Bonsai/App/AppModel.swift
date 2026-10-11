@@ -6,9 +6,13 @@ import SwiftUI
 @MainActor
 @Observable
 final class AppModel {
-    static let shared = isTesting
-        ? AppModel(store: Store(directory: FileManager.default.temporaryDirectory.appendingPathComponent("bonsai-host-\(UUID().uuidString)"),
-                                keychain: Keychain(service: "dev.txssu.Bonsai.tests.host")))
+    static let shared =
+        isTesting
+        ? AppModel(
+            store: Store(
+                directory: FileManager.default.temporaryDirectory.appendingPathComponent(
+                    "bonsai-host-\(UUID().uuidString)"),
+                keychain: Keychain(service: "dev.txssu.Bonsai.tests.host")))
         : AppModel()
 
     struct Route: Equatable {
@@ -98,7 +102,9 @@ final class AppModel {
     }
 
     var isMainWindowVisible: Bool {
-        NSApp.windows.contains { ($0.identifier?.rawValue.hasPrefix(WindowID.main) ?? false) && $0.isVisible && !$0.isMiniaturized }
+        NSApp.windows.contains {
+            ($0.identifier?.rawValue.hasPrefix(WindowID.main) ?? false) && $0.isVisible && !$0.isMiniaturized
+        }
     }
 }
 

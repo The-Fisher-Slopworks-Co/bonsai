@@ -12,7 +12,10 @@ enum ClaudeCLI {
 
     static var typicalPaths: [String] {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
-        return ["\(home)/.local/bin/claude", "\(home)/.claude/local/claude", "/opt/homebrew/bin/claude", "/usr/local/bin/claude"]
+        return [
+            "\(home)/.local/bin/claude", "\(home)/.claude/local/claude", "/opt/homebrew/bin/claude",
+            "/usr/local/bin/claude",
+        ]
     }
 
     static func locate(custom: String?, shell: String = "/bin/zsh") async -> String? {
@@ -28,14 +31,17 @@ enum ClaudeCLI {
     }
 
     static func isLoggedIn(_ path: String, shell: String = "/bin/zsh") async -> Bool {
-        guard let result = try? await ProcessRunner.run(shell, ["-lc", "\(quote(path)) auth status --json"]) else { return false }
+        guard let result = try? await ProcessRunner.run(shell, ["-lc", "\(quote(path)) auth status --json"]) else {
+            return false
+        }
         return parseLoggedIn(result.output)
     }
 
     static func parseLoggedIn(_ output: String) -> Bool {
         guard let start = output.firstIndex(of: "{"), let end = output.lastIndex(of: "}"),
-              let data = String(output[start...end]).data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return false }
+            let data = String(output[start...end]).data(using: .utf8),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return false }
         return object["loggedIn"] as? Bool ?? false
     }
 
