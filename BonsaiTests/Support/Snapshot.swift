@@ -9,7 +9,7 @@ enum Snapshot {
     static var directory: URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appendingPathComponent("build/shots")
+            .appendingPathComponent("build.noindex/shots")
     }
 
     static func save<V: View>(

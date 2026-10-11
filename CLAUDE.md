@@ -51,7 +51,7 @@ BonsaiTests/
 - Форматирование: `xcrun swift-format format -i --recursive Bonsai BonsaiTests tools/icon`.
 - Сборка: `xcodegen generate && xcodebuild -scheme Bonsai -configuration Debug build | tail -40`
 - Тесты: `tools/test.sh`
-- Запуск для ручной проверки: `open build/Debug/Bonsai.app` (путь из `project.yml`).
+- Запуск для ручной проверки: `open build.noindex/Debug/Bonsai.app` (путь из `project.yml`).
 
 ## Definition of done
 

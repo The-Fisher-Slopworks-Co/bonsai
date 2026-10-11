@@ -2,7 +2,7 @@
 # Copyright (C) 2026 The Fisher Slopworks Co
 
 *.xcodeproj/
-build/
+build.noindex/
 DerivedData/
 .DS_Store
 *.xcuserstate

@@ -11,7 +11,7 @@ brew install xcodegen periphery lefthook
 lefthook install   # pre-commit runs tools/check.sh
 xcodegen generate
 xcodebuild -scheme Bonsai -configuration Debug build
-open build/Debug/Bonsai.app
+open build.noindex/Debug/Bonsai.app
 ```
 
 To try it without a real GitLab, start one in Docker with `tests/gitlab/up.sh`, seed a project with three merge requests with `tests/gitlab/seed.sh demo`, and connect to <http://localhost:8929> with `BONSAI_TOKEN` from `tests/gitlab/.env`.
