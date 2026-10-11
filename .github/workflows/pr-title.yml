@@ -1,0 +1,27 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: pr-title-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  pr-title:
+    uses: The-Fisher-Slopworks-Co/.github/.github/workflows/pr-title.yml@main
+    with:
+      scopes: |
+        app
+        core
+        features
+        resources
+        tests
+        tools
+        deps
+        github
