@@ -3,8 +3,6 @@ import SwiftUI
 
 @MainActor
 enum Snapshot {
-    static var enabled: Bool { ProcessInfo.processInfo.environment["SNAPSHOTS"] == "1" }
-
     static var directory: URL {
         URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -13,7 +11,7 @@ enum Snapshot {
 
     static func save<V: View>(
         _ name: String, size: CGSize? = nil, appearance: NSAppearance.Name = .aqua, wait: Duration = .milliseconds(800),
-        sheet: (some View)? = Optional<EmptyView>.none, _ view: V
+        _ view: V
     ) async throws {
         let controller = NSHostingController(rootView: view)
         if size == nil { controller.sizingOptions = [.preferredContentSize] }

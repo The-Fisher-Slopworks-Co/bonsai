@@ -36,12 +36,12 @@ struct ProjectSettingsModelTests {
 
     @Test func claudeHints() {
         let defaults = ClaudeSettings()
-        #expect(ProjectSettingsModel.claudeHint(.inherit, settings: defaults) == L("ps.claudeHint.inherit"))
+        #expect(ProjectSettingsModel.claudeHint(.inherit, settings: defaults) == localized("ps.claudeHint.inherit"))
         var changed = defaults
         changed.push = .auto
         #expect(ProjectSettingsModel.claudeHint(.inherit, settings: changed) == nil)
-        #expect(ProjectSettingsModel.claudeHint(.manual, settings: changed) == L("ps.claudeHint.manual"))
-        #expect(ProjectSettingsModel.claudeHint(.off, settings: changed) == L("ps.claudeHint.off"))
+        #expect(ProjectSettingsModel.claudeHint(.manual, settings: changed) == localized("ps.claudeHint.manual"))
+        #expect(ProjectSettingsModel.claudeHint(.off, settings: changed) == localized("ps.claudeHint.off"))
     }
 }
 

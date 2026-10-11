@@ -158,7 +158,7 @@ struct FixPipeline: Sendable {
             attempt += 1
         }
 
-        let files = try await describe(kind, conflicted: allConflicted, recorder)
+        let files = try await describe(kind, conflicted: allConflicted)
         recorder.update { run in
             guard run.fix != nil else { return }
             run.fix!.files = files
@@ -235,9 +235,7 @@ struct FixPipeline: Sendable {
         return ok
     }
 
-    private func describe(_ kind: ClaudeFix.Kind, conflicted: [String: String], _ recorder: RunRecorder) async throws
-        -> [FixFile]
-    {
+    private func describe(_ kind: ClaudeFix.Kind, conflicted: [String: String]) async throws -> [FixFile] {
         var files: [FixFile]
         if kind == .conflict {
             files = conflicted.keys.sorted().map { path in
@@ -390,7 +388,7 @@ struct FixPipeline: Sendable {
         }
     }
 
-    func revert(_ recorder: RunRecorder, failure: MRStatus, now: @Sendable () -> Date = Date.init) async -> MRRun {
+    func revert(_ recorder: RunRecorder, failure: MRStatus) async -> MRRun {
         guard let fix = recorder.run.fix, let pushed = fix.pushedSHA else { return recorder.run }
         let log = recorder.fixLog(.push)
         do {
@@ -419,7 +417,7 @@ struct FixPipeline: Sendable {
                 recorder.update { $0.fix?.phase = .terminal }
                 return recorder.run
             }
-            let files = try await describe(fix.kind == .conflict ? .tests : fix.kind, conflicted: [:], recorder)
+            let files = try await describe(fix.kind == .conflict ? .tests : fix.kind, conflicted: [:])
             recorder.update { run in
                 if fix.kind != .conflict || !files.isEmpty {
                     run.fix?.files = fix.kind == .conflict ? fix.files + files : files

@@ -47,11 +47,11 @@ final class ProjectSettingsModel {
         switch mode {
         case .inherit:
             let described = settings.onTests && settings.onCI && !settings.onConflict && settings.push == .review
-            return described ? L("ps.claudeHint.inherit") : nil
+            return described ? localized("ps.claudeHint.inherit") : nil
         case .manual:
-            return L("ps.claudeHint.manual")
+            return localized("ps.claudeHint.manual")
         case .off:
-            return L("ps.claudeHint.off")
+            return localized("ps.claudeHint.off")
         }
     }
 }

@@ -12,7 +12,7 @@ struct AddProjectSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(verbatim: L("projects.sheetTitle"))
+            Text(verbatim: localized("projects.sheetTitle"))
                 .font(.headline)
                 .padding(.bottom, 16)
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 14) {
@@ -26,7 +26,7 @@ struct AddProjectSheet: View {
                 }
                 GridRow {
                     label("projects.setup")
-                    command($model.setup, placeholder: "./scripts/setup.sh", hint: L("projects.setupHint"))
+                    command($model.setup, placeholder: "./scripts/setup.sh", hint: localized("projects.setupHint"))
                 }
                 GridRow {
                     label("projects.test")
@@ -35,9 +35,9 @@ struct AddProjectSheet: View {
             }
             HStack {
                 Spacer()
-                Button(L("projects.cancel"), role: .cancel) { dismiss() }
+                Button(localized("projects.cancel"), role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(L("projects.addButton")) {
+                Button(localized("projects.addButton")) {
                     guard let project = model.project() else { return }
                     onAdd(project)
                     dismiss()
@@ -53,19 +53,22 @@ struct AddProjectSheet: View {
     }
 
     private func label(_ key: String) -> some View {
-        Text(verbatim: L(key))
+        Text(verbatim: localized(key))
             .frame(width: 90, alignment: .trailing)
             .gridColumnAlignment(.trailing)
     }
 
     private var projectPicker: some View {
         VStack(spacing: 6) {
-            TextField(L("projects.project"), text: $model.query, prompt: Text(verbatim: L("projects.projectPh")))
-                .textFieldStyle(.roundedBorder)
-                .labelsHidden()
-                .overlay(alignment: .trailing) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.tertiary).padding(.trailing, 6)
-                }
+            TextField(
+                localized("projects.project"), text: $model.query,
+                prompt: Text(verbatim: localized("projects.projectPh"))
+            )
+            .textFieldStyle(.roundedBorder)
+            .labelsHidden()
+            .overlay(alignment: .trailing) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.tertiary).padding(.trailing, 6)
+            }
             List(selection: $model.selectedID) {
                 ForEach(model.results) { project in
                     VStack(alignment: .leading, spacing: 1) {
@@ -82,17 +85,17 @@ struct AddProjectSheet: View {
             .frame(height: 172)
             .overlay {
                 if model.searched && model.results.isEmpty {
-                    Text(verbatim: L("projects.noMatch")).foregroundStyle(.secondary)
+                    Text(verbatim: localized("projects.noMatch")).foregroundStyle(.secondary)
                 }
             }
         }
     }
 
     private var branchPicker: some View {
-        Picker(L("projects.branch"), selection: $model.branch) {
+        Picker(localized("projects.branch"), selection: $model.branch) {
             ForEach(model.branches, id: \.name) { branch in
                 if branch.isDefault {
-                    Text(verbatim: "\(branch.name) — \(L("projects.defaultTag"))").tag(Optional(branch.name))
+                    Text(verbatim: "\(branch.name) — \(localized("projects.defaultTag"))").tag(Optional(branch.name))
                 } else {
                     Text(verbatim: branch.name).tag(Optional(branch.name))
                 }

@@ -280,7 +280,7 @@ struct MRPipeline: Sendable {
         while true {
             try Task.checkCancellation()
             let waited = now().timeIntervalSince(started)
-            if let pipeline = try await effects.pipeline(sha: sha, branch: source) {
+            if let pipeline = try await effects.pipeline(sha: sha) {
                 if announced != pipeline.id {
                     announced = pipeline.id
                     recorder.update { $0.pipelineID = pipeline.id }

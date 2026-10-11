@@ -86,7 +86,7 @@ struct FixReviewSheet: View {
                 let attention = files.indices.filter { FixReview.needsAttention(files[$0]) }
                 let rest = files.indices.filter { !FixReview.needsAttention(files[$0]) }
                 if !attention.isEmpty {
-                    Section(L("fix.grpCheck")) {
+                    Section(localized("fix.grpCheck")) {
                         ForEach(attention, id: \.self) { navRow($0) }
                     }
                 }
@@ -98,11 +98,11 @@ struct FixReviewSheet: View {
                     ) {
                         ForEach(rest, id: \.self) { navRow($0) }
                     } header: {
-                        Text(verbatim: L("fix.grpRest"))
+                        Text(verbatim: localized("fix.grpRest"))
                     }
                 }
             } else {
-                Section(L("fix.changesNav")) {
+                Section(localized("fix.changesNav")) {
                     ForEach(files.indices, id: \.self) { navRow($0) }
                 }
             }
@@ -131,20 +131,20 @@ struct FixReviewSheet: View {
 
     @ViewBuilder private var commitRow: some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(verbatim: L("fix.commitLabel"))
+            Text(verbatim: localized("fix.commitLabel"))
                 .fontWeight(.semibold)
             if fix.kind == .conflict {
-                Text(verbatim: L("fix.noCommit"))
+                Text(verbatim: localized("fix.noCommit"))
                     .foregroundStyle(.secondary)
                 Spacer()
             } else {
-                TextField(L("fix.commitLabel"), text: $message)
+                TextField(localized("fix.commitLabel"), text: $message)
                     .labelsHidden()
                     .font(.system(size: 12, design: .monospaced))
                     .textFieldStyle(.roundedBorder)
                     .disabled(!decide)
                 if decide {
-                    Text(verbatim: L("fix.commitHint"))
+                    Text(verbatim: localized("fix.commitHint"))
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                 }
@@ -155,20 +155,20 @@ struct FixReviewSheet: View {
     @ViewBuilder private var footer: some View {
         HStack(spacing: 8) {
             if decide {
-                Button(L("fix.reject")) {
+                Button(localized("fix.reject")) {
                     workspace.rejectFix(mr)
                     dismiss()
                 }
                 if fix.sessionID != nil {
-                    Button(L("fix.terminal")) {
+                    Button(localized("fix.terminal")) {
                         workspace.continueInTerminal(mr)
                         dismiss()
                     }
                 }
                 Spacer()
-                Button(L("fix.later")) { dismiss() }
+                Button(localized("fix.later")) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(L("fix.push")) {
+                Button(localized("fix.push")) {
                     workspace.pushFix(mr, message: message.trimmingCharacters(in: .whitespacesAndNewlines))
                     dismiss()
                 }
@@ -176,7 +176,7 @@ struct FixReviewSheet: View {
                 .disabled(fix.kind != .conflict && message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } else {
                 Spacer()
-                Button(L("fix.done")) { dismiss() }
+                Button(localized("fix.done")) { dismiss() }
                     .keyboardShortcut(.defaultAction)
             }
         }
@@ -221,7 +221,7 @@ private struct FileChanges: View {
                     ForEach(Array(file.conflicts.enumerated()), id: \.offset) { _, conflict in
                         DiffBlock(rows: FixReview.rows(conflict))
                         if !conflict.dropped.isEmpty {
-                            Text(verbatim: L("fix.dropped"))
+                            Text(verbatim: localized("fix.dropped"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.secondary)
                             DiffBlock(
@@ -233,9 +233,11 @@ private struct FileChanges: View {
                         }
                     }
                 case .lock:
-                    Text(verbatim: L("fix.kind.lock") + ", " + L("fix.conflictsN", file.conflicts.count))
-                        .font(.system(size: 12, design: .monospaced))
-                        .foregroundStyle(.secondary)
+                    Text(
+                        verbatim: localized("fix.kind.lock") + ", " + localized("fix.conflictsN", file.conflicts.count)
+                    )
+                    .font(.system(size: 12, design: .monospaced))
+                    .foregroundStyle(.secondary)
                 }
             }
             .padding(20)
@@ -289,20 +291,20 @@ enum FixReview {
 
     static func title(_ fix: ClaudeFix) -> String {
         switch fix.kind {
-        case .tests: L("fix.sheetTitle.tests")
-        case .ci: L("fix.sheetTitle.ci", fix.job ?? "CI")
-        case .conflict: L("fix.sheetTitle.conflict", fix.resolvedConflicts)
+        case .tests: localized("fix.sheetTitle.tests")
+        case .ci: localized("fix.sheetTitle.ci", fix.job ?? "CI")
+        case .conflict: localized("fix.sheetTitle.conflict", fix.resolvedConflicts)
         }
     }
 
     static func badges(_ fix: ClaudeFix) -> [Badge] {
-        let verified = L("fix.verified") + (fix.phase == .pushed ? " · " + L("fix.pushedBadge") : "")
+        let verified = localized("fix.verified") + (fix.phase == .pushed ? " · " + localized("fix.pushedBadge") : "")
         var badges = [Badge(text: verified, warning: false)]
         if fix.kind != .conflict {
             badges.append(
                 fix.testsTouched
-                    ? Badge(text: L("fix.testsTouched"), warning: true)
-                    : Badge(text: L("fix.testsUntouched"), warning: false))
+                    ? Badge(text: localized("fix.testsTouched"), warning: true)
+                    : Badge(text: localized("fix.testsUntouched"), warning: false))
         }
         return badges
     }
@@ -320,25 +322,25 @@ enum FixReview {
         case .diff:
             return MRPresentation.stat(added: file.added, removed: file.removed)
         case .lock:
-            return L("fix.conflictsN", file.conflicts.count) + " · " + L("fix.kind.lock")
+            return localized("fix.conflictsN", file.conflicts.count) + " · " + localized("fix.kind.lock")
         case .conflict:
-            guard let first = file.conflicts.first else { return L("fix.kind.own") }
+            guard let first = file.conflicts.first else { return localized("fix.kind.own") }
             let place =
                 file.conflicts.count > 1
-                ? L("fix.conflictsN", file.conflicts.count)
+                ? localized("fix.conflictsN", file.conflicts.count)
                 : first.startLine == first.endLine
-                    ? L("fix.line", first.startLine) : L("fix.lines", first.startLine, first.endLine)
+                    ? localized("fix.line", first.startLine) : localized("fix.lines", first.startLine, first.endLine)
             return place + " · " + kindTitle(file)
         }
     }
 
     static func kindTitle(_ file: FixFile) -> String {
-        if file.kind == .lock { return L("fix.kind.lock") }
-        if needsAttention(file) { return L("fix.kind.own") }
+        if file.kind == .lock { return localized("fix.kind.lock") }
+        if needsAttention(file) { return localized("fix.kind.own") }
         let sources = Set(file.conflicts.map(\.source))
-        if sources == [.main] { return L("fix.kind.main") }
-        if sources == [.branch] { return L("fix.kind.branch") }
-        return L("fix.kind.both")
+        if sources == [.main] { return localized("fix.kind.main") }
+        if sources == [.branch] { return localized("fix.kind.branch") }
+        return localized("fix.kind.both")
     }
 
     static func kindColor(_ file: FixFile) -> Color {
@@ -366,9 +368,9 @@ enum FixReview {
 
     static func originTitle(_ origin: ResolvedConflict.Line.Origin) -> String {
         switch origin {
-        case .main: L("fix.fromMain")
-        case .branch: L("fix.fromBranch")
-        case .own: L("fix.fromClaude")
+        case .main: localized("fix.fromMain")
+        case .branch: localized("fix.fromBranch")
+        case .own: localized("fix.fromClaude")
         case .context: ""
         }
     }

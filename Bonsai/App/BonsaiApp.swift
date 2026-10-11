@@ -22,7 +22,7 @@ struct BonsaiApp: App {
         }
         .defaultLaunchBehavior(app.store.isSignedIn ? .presented : .suppressed)
 
-        Window(L("connect.title"), id: WindowID.connect) {
+        Window(localized("connect.title"), id: WindowID.connect) {
             ConnectView(store: app.store)
                 .modifier(CaptureWindowActions(app: app))
         }

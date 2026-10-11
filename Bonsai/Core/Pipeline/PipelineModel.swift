@@ -54,19 +54,6 @@ enum MRStatus: Codable, Equatable, Sendable {
     case error(message: String)
     case unknown
 
-    enum Tone: Sendable {
-        case working, attention, fine, waiting
-    }
-
-    var tone: Tone {
-        switch self {
-        case .running: .working
-        case .testsFailed, .ciFailed, .conflict, .pushFailed, .error: .attention
-        case .upToDate: .fine
-        case .behind, .branchChanged, .unknown: .waiting
-        }
-    }
-
     var isFinal: Bool {
         switch self {
         case .running, .unknown: false

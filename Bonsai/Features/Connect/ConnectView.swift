@@ -51,9 +51,9 @@ struct ConnectView: View {
                 )
                 .padding(.bottom, 8)
                 .accessibilityHidden(true)
-            Text(verbatim: L("connect.title"))
+            Text(verbatim: localized("connect.title"))
                 .font(.system(size: 26, weight: .semibold))
-            Text(verbatim: L("connect.intro"))
+            Text(verbatim: localized("connect.intro"))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
@@ -62,9 +62,10 @@ struct ConnectView: View {
     private var fields: some View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(spacing: 0) {
-                row(L("connect.server")) {
+                row(localized("connect.server")) {
                     TextField(
-                        L("connect.server"), text: $model.server, prompt: Text(verbatim: "https://gitlab.example.com")
+                        localized("connect.server"), text: $model.server,
+                        prompt: Text(verbatim: "https://gitlab.example.com")
                     )
                     .textContentType(.URL)
                     .focused($focus, equals: .server)
@@ -72,13 +73,15 @@ struct ConnectView: View {
                     .onSubmit { focus = .token }
                 }
                 Divider().padding(.leading, 12)
-                row(L("connect.token")) {
+                row(localized("connect.token")) {
                     HStack(spacing: 4) {
                         Group {
                             if model.reveal {
-                                TextField(L("connect.token"), text: $model.token, prompt: Text(verbatim: "glpat-…"))
+                                TextField(
+                                    localized("connect.token"), text: $model.token, prompt: Text(verbatim: "glpat-…"))
                             } else {
-                                SecureField(L("connect.token"), text: $model.token, prompt: Text(verbatim: "glpat-…"))
+                                SecureField(
+                                    localized("connect.token"), text: $model.token, prompt: Text(verbatim: "glpat-…"))
                             }
                         }
                         .font(.system(size: 12, design: .monospaced))
@@ -92,8 +95,8 @@ struct ConnectView: View {
                         }
                         .buttonStyle(.borderless)
                         .foregroundStyle(.secondary)
-                        .help(L(model.reveal ? "connect.hideToken" : "connect.showToken"))
-                        .accessibilityLabel(L(model.reveal ? "connect.hideToken" : "connect.showToken"))
+                        .help(localized(model.reveal ? "connect.hideToken" : "connect.showToken"))
+                        .accessibilityLabel(localized(model.reveal ? "connect.hideToken" : "connect.showToken"))
                     }
                 }
             }
@@ -104,12 +107,12 @@ struct ConnectView: View {
     }
 
     private var hint: some View {
-        var text = AttributedString(L("connect.hintA"))
+        var text = AttributedString(localized("connect.hintA"))
         var scope = AttributedString("api")
         scope.font = .system(size: 11, design: .monospaced)
         text += scope
-        text += AttributedString(L("connect.hintC"))
-        var link = AttributedString(L("connect.hintLink"))
+        text += AttributedString(localized("connect.hintC"))
+        var link = AttributedString(localized("connect.hintLink"))
         link.link = model.tokenPageURL
         text += link
         return Text(text)
@@ -118,7 +121,7 @@ struct ConnectView: View {
     }
 
     private var trustBox: some View {
-        Toggle(L("connect.trust"), isOn: $model.trust)
+        Toggle(localized("connect.trust"), isOn: $model.trust)
             .toggleStyle(.checkbox)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 12)
@@ -136,7 +139,7 @@ struct ConnectView: View {
                         if model.phase == .checking {
                             ProgressView().controlSize(.small)
                         }
-                        Text(verbatim: L(model.phase == .checking ? "connect.connecting" : "connect.connect"))
+                        Text(verbatim: localized(model.phase == .checking ? "connect.connecting" : "connect.connect"))
                     }
                 }
                 .buttonStyle(.borderedProminent)
@@ -153,7 +156,7 @@ struct ConnectView: View {
         switch model.phase {
         case .connected(let username):
             Label {
-                Text("\(L("connect.connectedAs")) \(Text(verbatim: "@" + username).bold())")
+                Text("\(localized("connect.connectedAs")) \(Text(verbatim: "@" + username).bold())")
             } icon: {
                 Image(systemName: "checkmark.circle.fill").foregroundStyle(.white, .green)
             }
@@ -172,9 +175,9 @@ struct ConnectView: View {
 
     private var errorText: String {
         switch model.phase {
-        case .badToken: L("connect.errToken")
-        case .certificate: L("connect.errCert")
-        default: L("connect.errUrl")
+        case .badToken: localized("connect.errToken")
+        case .certificate: localized("connect.errCert")
+        default: localized("connect.errUrl")
         }
     }
 

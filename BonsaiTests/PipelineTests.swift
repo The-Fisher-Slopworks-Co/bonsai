@@ -54,7 +54,7 @@ final class FakeEffects: PipelineEffects, @unchecked Sendable {
         )
         return result
     }
-    func pipeline(sha: String, branch: String) async throws -> CIPipeline? {
+    func pipeline(sha: String) async throws -> CIPipeline? {
         lock.withLock {
             calls.append("pipeline \(sha)")
             defer { pipelineIndex += 1 }

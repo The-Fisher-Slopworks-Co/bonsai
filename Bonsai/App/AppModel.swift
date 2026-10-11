@@ -34,7 +34,7 @@ final class AppModel {
         workspace = Workspace(store: store)
         scheduler = Scheduler(workspace: workspace)
         workspace.onStatusChange = { [weak self] change in
-            self?.onStatusChange.forEach { $0(change) }
+            for handler in self?.onStatusChange ?? [] { handler(change) }
         }
         workspace.openTerminal = { url in NSWorkspace.shared.open(url) }
     }

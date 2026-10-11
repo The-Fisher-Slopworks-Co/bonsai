@@ -51,9 +51,9 @@ struct MenuBarModel: Equatable {
         let working = members(.working)
         let attention = members(.attention)
         sections = [
-            Section(title: L("menu.awaitingReview"), items: decide),
-            Section(title: L("menu.inProgress"), items: working),
-            Section(title: L("menu.attention"), items: attention),
+            Section(title: localized("menu.awaitingReview"), items: decide),
+            Section(title: localized("menu.inProgress"), items: working),
+            Section(title: localized("menu.attention"), items: attention),
         ]
         .filter { !$0.items.isEmpty }
         freshCount =
@@ -69,14 +69,14 @@ struct MenuBarModel: Equatable {
     var headerText: String {
         switch header {
         case .paused(let until):
-            L("menu.pausedUntil", until.formatted(date: .omitted, time: .shortened))
+            localized("menu.pausedUntil", until.formatted(date: .omitted, time: .shortened))
         case .checking:
-            L("menu.checking")
+            localized("menu.checking")
         case .checked(let date):
             if let date, Date().timeIntervalSince(date) >= 60 {
-                L("menu.checkedAgo", MRPresentation.relative(date))
+                localized("menu.checkedAgo", MRPresentation.relative(date))
             } else {
-                L("menu.checkedNow")
+                localized("menu.checkedNow")
             }
         }
     }

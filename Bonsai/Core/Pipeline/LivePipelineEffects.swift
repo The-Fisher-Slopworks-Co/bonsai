@@ -69,7 +69,7 @@ struct LivePipelineEffects: PipelineEffects {
         output.contains("stale info") || output.contains("(fetch first)") || output.contains("non-fast-forward")
     }
 
-    func pipeline(sha: String, branch: String) async throws -> CIPipeline? {
+    func pipeline(sha: String) async throws -> CIPipeline? {
         guard let pipeline = try await gitlab.latestPipeline(project: projectID, sha: sha) else { return nil }
         return CIPipeline(id: pipeline.id, status: pipeline.ciStatus)
     }

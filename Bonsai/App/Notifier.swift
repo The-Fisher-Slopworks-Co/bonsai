@@ -23,7 +23,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     func handle(_ change: Workspace.StatusChange) {
         guard let note = NotificationRules.note(for: change, settings: settings), !quiet else { return }
         post(
-            title: L(note.title), body: "\(change.mr.title) · \(change.project.name)",
+            title: localized(note.title), body: "\(change.mr.title) · \(change.project.name)",
             info: ["project": note.projectID, "mr": note.mrID], id: "\(note.mrID)-\(note.title)")
     }
 
@@ -35,7 +35,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         }
         if lost && wasConnected && settings.noConnection && !quiet {
             post(
-                title: L("notify.noConnection"), body: app.store.account?.server.host() ?? "", info: [:],
+                title: localized("notify.noConnection"), body: app.store.account?.server.host() ?? "", info: [:],
                 id: "connection")
         }
         wasConnected = !lost

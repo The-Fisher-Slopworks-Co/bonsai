@@ -10,8 +10,8 @@ struct L10nTests {
     }
 
     @Test func bothLanguagesPresent() throws {
-        #expect(L("connect.title", bundle: try bundle("en"), []) == "Connect to GitLab")
-        #expect(L("connect.title", bundle: try bundle("ru"), []) == "Подключение к GitLab")
+        #expect(localized("connect.title", bundle: try bundle("en"), []) == "Connect to GitLab")
+        #expect(localized("connect.title", bundle: try bundle("ru"), []) == "Подключение к GitLab")
     }
 
     @Test(arguments: [
@@ -19,12 +19,12 @@ struct L10nTests {
         (21, "Отстаёт на 21 коммит"),
     ])
     func russianPlurals(n: Int, text: String) throws {
-        #expect(L("mr.behind", bundle: try bundle("ru"), [n]) == text)
+        #expect(localized("mr.behind", bundle: try bundle("ru"), [n]) == text)
     }
 
     @Test func englishPlurals() throws {
         let en = try bundle("en")
-        #expect(L("mr.behind", bundle: en, [1]) == "Behind by 1 commit")
-        #expect(L("mr.behind", bundle: en, [3]) == "Behind by 3 commits")
+        #expect(localized("mr.behind", bundle: en, [1]) == "Behind by 1 commit")
+        #expect(localized("mr.behind", bundle: en, [3]) == "Behind by 3 commits")
     }
 }
