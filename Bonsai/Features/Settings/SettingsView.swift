@@ -2,20 +2,18 @@ import AppKit
 import SwiftUI
 
 struct SettingsView: View {
-    @Environment(AppModel.self) private var app
-
     var body: some View {
         TabView {
-            Tab(L("settings.tab.general"), systemImage: "gearshape") {
+            Tab(localized("settings.tab.general"), systemImage: "gearshape") {
                 GeneralSettings()
             }
-            Tab(L("settings.tab.claude"), systemImage: "sparkle") {
+            Tab(localized("settings.tab.claude"), systemImage: "sparkle") {
                 ClaudeSettingsView()
             }
-            Tab(L("settings.tab.notifications"), systemImage: "bell") {
+            Tab(localized("settings.tab.notifications"), systemImage: "bell") {
                 NotificationSettingsView()
             }
-            Tab(L("settings.tab.account"), systemImage: "person.crop.circle") {
+            Tab(localized("settings.tab.account"), systemImage: "person.crop.circle") {
                 AccountSettings()
             }
         }
@@ -30,43 +28,44 @@ struct GeneralSettings: View {
     var body: some View {
         @Bindable var store = app.store
         Form {
-            Section(L("settings.checkingTitle")) {
-                Picker(L("settings.interval"), selection: $store.settings.interval) {
+            Section(localized("settings.checkingTitle")) {
+                Picker(localized("settings.interval"), selection: $store.settings.interval) {
                     ForEach([CheckInterval.everyMinute, .every5, .every15, .every30, .manual], id: \.self) { interval in
-                        Text(verbatim: L("settings.interval.\(interval.rawValue)")).tag(interval)
+                        Text(verbatim: localized("settings.interval.\(interval.rawValue)")).tag(interval)
                     }
                 }
-                LabeledContent(L("settings.parallel")) {
+                LabeledContent(localized("settings.parallel")) {
                     HStack(spacing: 6) {
                         Text(verbatim: "\(store.settings.parallel)").monospacedDigit()
                         Stepper(
-                            L("settings.parallel"), value: $store.settings.parallel, in: Bonsai.Settings.parallelRange
+                            localized("settings.parallel"), value: $store.settings.parallel,
+                            in: Bonsai.Settings.parallelRange
                         )
                         .labelsHidden()
                     }
                 }
             }
             Section {
-                Picker(L("settings.whichTitle"), selection: $store.settings.scope) {
-                    Text(verbatim: L("settings.scopeMine")).tag(MRScope.mine)
-                    Text(verbatim: L("settings.scopeAll")).tag(MRScope.all)
+                Picker(localized("settings.whichTitle"), selection: $store.settings.scope) {
+                    Text(verbatim: localized("settings.scopeMine")).tag(MRScope.mine)
+                    Text(verbatim: localized("settings.scopeAll")).tag(MRScope.all)
                 }
                 .pickerStyle(.radioGroup)
                 .horizontalRadioGroupLayout()
                 .labelsHidden()
                 if store.settings.scope == .all {
-                    Text(verbatim: L("settings.scopeAllHint"))
+                    Text(verbatim: localized("settings.scopeAllHint"))
                         .font(.callout)
                         .foregroundStyle(.orange)
                 }
-                Toggle(L("settings.skipDrafts"), isOn: $store.settings.skipDrafts)
-                TextField(L("settings.skipLabel"), text: $store.settings.skipLabel)
+                Toggle(localized("settings.skipDrafts"), isOn: $store.settings.skipDrafts)
+                TextField(localized("settings.skipLabel"), text: $store.settings.skipLabel)
             } header: {
-                Text(verbatim: L("settings.whichTitle"))
+                Text(verbatim: localized("settings.whichTitle"))
             }
-            Section(L("settings.appTitle")) {
-                Toggle(L("settings.login"), isOn: $store.settings.openAtLogin)
-                Toggle(L("settings.dock"), isOn: $store.settings.dockIcon)
+            Section(localized("settings.appTitle")) {
+                Toggle(localized("settings.login"), isOn: $store.settings.openAtLogin)
+                Toggle(localized("settings.dock"), isOn: $store.settings.dockIcon)
             }
         }
         .formStyle(.grouped)
@@ -111,7 +110,7 @@ struct ClaudeSettingsView: View {
                     } else {
                         ProgressView().controlSize(.small)
                     }
-                    Button(L("settings.choose"), action: choose)
+                    Button(localized("settings.choose"), action: choose)
                 }
             } footer: {
                 if let hint = check?.status.hint {
@@ -120,54 +119,54 @@ struct ClaudeSettingsView: View {
             }
             Group {
                 Section {
-                    Toggle(L("settings.autoConflict"), isOn: $store.settings.claude.onConflict)
-                    Toggle(L("settings.autoTests"), isOn: $store.settings.claude.onTests)
-                    Toggle(L("settings.autoCi"), isOn: $store.settings.claude.onCI)
+                    Toggle(localized("settings.autoConflict"), isOn: $store.settings.claude.onConflict)
+                    Toggle(localized("settings.autoTests"), isOn: $store.settings.claude.onTests)
+                    Toggle(localized("settings.autoCi"), isOn: $store.settings.claude.onCI)
                 } header: {
-                    Text(verbatim: L("settings.autoTitle"))
+                    Text(verbatim: localized("settings.autoTitle"))
                 } footer: {
-                    Text(verbatim: L("settings.autoHint")).foregroundStyle(.secondary)
+                    Text(verbatim: localized("settings.autoHint")).foregroundStyle(.secondary)
                 }
                 Section {
-                    Picker(L("settings.pushTitle"), selection: $store.settings.claude.push) {
-                        Text(verbatim: L("settings.pushReview")).tag(PushMode.review)
-                        Text(verbatim: L("settings.pushAuto")).tag(PushMode.auto)
+                    Picker(localized("settings.pushTitle"), selection: $store.settings.claude.push) {
+                        Text(verbatim: localized("settings.pushReview")).tag(PushMode.review)
+                        Text(verbatim: localized("settings.pushAuto")).tag(PushMode.auto)
                     }
                     .pickerStyle(.radioGroup)
                     if store.settings.claude.push == .auto {
-                        Text(verbatim: L("settings.pushAutoHint"))
+                        Text(verbatim: localized("settings.pushAutoHint"))
                             .font(.callout)
                             .foregroundStyle(.orange)
                     }
-                    LabeledContent(L("settings.attempts")) {
+                    LabeledContent(localized("settings.attempts")) {
                         HStack(spacing: 6) {
                             Text(verbatim: "\(store.settings.claude.attempts)").monospacedDigit()
                             Stepper(
-                                L("settings.attempts"), value: $store.settings.claude.attempts,
+                                localized("settings.attempts"), value: $store.settings.claude.attempts,
                                 in: Bonsai.Settings.attemptsRange
                             )
                             .labelsHidden()
                         }
                     }
                 } header: {
-                    Text(verbatim: L("settings.fixesTitle"))
+                    Text(verbatim: localized("settings.fixesTitle"))
                 } footer: {
-                    Text(verbatim: L("settings.perProjectHint")).foregroundStyle(.secondary)
+                    Text(verbatim: localized("settings.perProjectHint")).foregroundStyle(.secondary)
                 }
                 Section {
                     TextEditor(
                         text: Binding(
-                            get: { store.settings.claude.rules ?? L("settings.rulesDefault") },
-                            set: { store.settings.claude.rules = $0 == L("settings.rulesDefault") ? nil : $0 }
+                            get: { store.settings.claude.rules ?? localized("settings.rulesDefault") },
+                            set: { store.settings.claude.rules = $0 == localized("settings.rulesDefault") ? nil : $0 }
                         )
                     )
                     .font(.system(size: 12, design: .monospaced))
                     .frame(height: 96)
                     .scrollContentBackground(.hidden)
                 } header: {
-                    Text(verbatim: L("settings.rulesTitle"))
+                    Text(verbatim: localized("settings.rulesTitle"))
                 } footer: {
-                    Text(verbatim: L("settings.rulesHint")).foregroundStyle(.secondary)
+                    Text(verbatim: localized("settings.rulesHint")).foregroundStyle(.secondary)
                 }
             }
             .disabled(!ready)
@@ -197,17 +196,17 @@ struct ClaudeSettingsView: View {
 extension ClaudeCLI.Status {
     var title: String {
         switch self {
-        case .ready: L("settings.cliOk")
-        case .notFound: L("settings.cliNotFound")
-        case .needsLogin: L("settings.cliNotLoggedIn")
+        case .ready: localized("settings.cliOk")
+        case .notFound: localized("settings.cliNotFound")
+        case .needsLogin: localized("settings.cliNotLoggedIn")
         }
     }
 
     var hint: String? {
         switch self {
         case .ready: nil
-        case .notFound: L("settings.cliHintNotFound")
-        case .needsLogin: L("settings.cliHintLogin")
+        case .notFound: localized("settings.cliHintNotFound")
+        case .needsLogin: localized("settings.cliHintLogin")
         }
     }
 
@@ -226,25 +225,26 @@ struct NotificationSettingsView: View {
     var body: some View {
         @Bindable var store = app.store
         Form {
-            Section(L("settings.notifyWhen")) {
+            Section(localized("settings.notifyWhen")) {
                 row(
-                    L("settings.nClaudeReady"), nil, icon: "ellipsis.circle.fill", color: .purple,
+                    localized("settings.nClaudeReady"), nil, icon: "ellipsis.circle.fill", color: .purple,
                     isOn: $store.settings.notifications.claudeReady)
                 row(
-                    L("settings.nNeedsMe"), L("settings.nNeedsMeSub"), icon: "xmark.circle.fill", color: .red,
+                    localized("settings.nNeedsMe"), localized("settings.nNeedsMeSub"), icon: "xmark.circle.fill",
+                    color: .red,
                     isOn: $store.settings.notifications.needsMe)
                 row(
-                    L("settings.nAuth"), nil, icon: "xmark.circle.fill", color: .orange,
+                    localized("settings.nAuth"), nil, icon: "xmark.circle.fill", color: .orange,
                     isOn: $store.settings.notifications.noConnection)
                 row(
-                    L("settings.nOk"), nil, icon: "checkmark.circle.fill", color: .green,
+                    localized("settings.nOk"), nil, icon: "checkmark.circle.fill", color: .green,
                     isOn: $store.settings.notifications.updated)
                 row(
-                    L("settings.nStart"), nil, icon: "play.circle.fill", color: .blue,
+                    localized("settings.nStart"), nil, icon: "play.circle.fill", color: .blue,
                     isOn: $store.settings.notifications.started)
             }
             Section {
-                Toggle(L("settings.quiet"), isOn: $store.settings.notifications.quietWhileWindowOpen)
+                Toggle(localized("settings.quiet"), isOn: $store.settings.notifications.quietWhileWindowOpen)
             } footer: {
                 Text(systemHint).foregroundStyle(.secondary)
             }
@@ -254,8 +254,8 @@ struct NotificationSettingsView: View {
     }
 
     private var systemHint: AttributedString {
-        var text = AttributedString(L("settings.systemHintA"))
-        var link = AttributedString(L("settings.systemHintLink"))
+        var text = AttributedString(localized("settings.systemHintA"))
+        var link = AttributedString(localized("settings.systemHintLink"))
         link.link = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")
         text += link
         text += AttributedString(".")
@@ -310,13 +310,13 @@ struct AccountSettings: View {
                     }
                 }
                 Section {
-                    LabeledContent(L("settings.token")) {
+                    LabeledContent(localized("settings.token")) {
                         HStack(spacing: 8) {
                             if let text = model?.tokenText {
                                 Text(verbatim: text).foregroundStyle(
                                     model?.connection == .tokenExpired ? .red : .secondary)
                             }
-                            Button(L("settings.changeToken")) { app.changeToken() }
+                            Button(localized("settings.changeToken")) { app.changeToken() }
                         }
                     }
                     Toggle(
@@ -325,27 +325,27 @@ struct AccountSettings: View {
                             set: { on in Task { await model?.setTrust(on) } })
                     ) {
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(verbatim: L("settings.tls"))
-                            Text(verbatim: L("settings.tlsHint"))
+                            Text(verbatim: localized("settings.tls"))
+                            Text(verbatim: localized("settings.tlsHint"))
                                 .font(.callout)
                                 .foregroundStyle(account.trustedFingerprint != nil ? .orange : .secondary)
                         }
                     }
                 }
-                Section(L("settings.gitAuthor")) {
+                Section(localized("settings.gitAuthor")) {
                     TextField(
-                        L("settings.gitName"),
+                        localized("settings.gitName"),
                         text: Binding(
                             get: { app.store.settings.gitIdentity.name },
                             set: { app.store.settings.gitIdentity.name = $0 }))
                     TextField(
-                        L("settings.gitEmail"),
+                        localized("settings.gitEmail"),
                         text: Binding(
                             get: { app.store.settings.gitIdentity.email },
                             set: { app.store.settings.gitIdentity.email = $0 }))
                 }
                 Section {
-                    Button(L("settings.signOut"), role: .destructive) { app.signOut() }
+                    Button(localized("settings.signOut"), role: .destructive) { app.signOut() }
                 }
             }
         }

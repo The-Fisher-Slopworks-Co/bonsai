@@ -37,7 +37,7 @@ struct LiveClaudeTests {
             clone: clone, worktree: root.appendingPathComponent("fixes/tests"), gitlab: gitlab, projectID: id,
             claudePath: claudePath, runner: runner)
         let fixer = FixPipeline(
-            mr: failing, project: project, effects: effects, rules: L("settings.rulesDefault"), config: config)
+            mr: failing, project: project, effects: effects, rules: localized("settings.rulesDefault"), config: config)
         let recorder = RunRecorder(failedRun) { _ in }
         let fixed = await fixer.fix(.tests, recorder)
         let fix = try #require(fixed.fix)
@@ -64,7 +64,7 @@ struct LiveClaudeTests {
             clone: clone, worktree: root.appendingPathComponent("fixes/conflict"), gitlab: gitlab, projectID: id,
             claudePath: claudePath, runner: runner)
         let conflictFixer = FixPipeline(
-            mr: conflictMR, project: project, effects: conflictEffects, rules: L("settings.rulesDefault"),
+            mr: conflictMR, project: project, effects: conflictEffects, rules: localized("settings.rulesDefault"),
             config: config)
         let resolved = await conflictFixer.fix(.conflict, RunRecorder(conflictRun) { _ in })
         let conflictFix = try #require(resolved.fix)

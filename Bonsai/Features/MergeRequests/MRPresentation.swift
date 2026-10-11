@@ -54,56 +54,56 @@ struct MRPresentation: Equatable {
             bannerTitle = ""
             bannerBody = ""
         case .behind(let commits):
-            statusText = L("mr.behind", commits)
+            statusText = localized("mr.behind", commits)
             icon = .down
             tone = .orange
             bannerTitle = statusText
-            bannerBody = L("mr.noteBehind")
+            bannerBody = localized("mr.noteBehind")
             actions = [.run]
         case .running(let stage, let attempt):
             let name = Self.stageName(stage) + "…"
-            statusText = attempt > 1 ? "\(name) · \(L("mr.attempt")) \(attempt)" : name
+            statusText = attempt > 1 ? "\(name) · \(localized("mr.attempt")) \(attempt)" : name
             icon = .spinner
             tone = .blue
             bannerTitle = name
-            bannerBody = attempt > 1 ? L("mr.noteRetry", attempt) : Self.subtitle(run[stage])
+            bannerBody = attempt > 1 ? localized("mr.noteRetry", attempt) : Self.subtitle(run[stage])
             actions = [.stop]
         case .upToDate(let pushed):
-            statusText = L("mr.fresh")
+            statusText = localized("mr.fresh")
             icon = .check
             tone = .green
             bannerTitle = statusText
-            bannerBody = L(pushed ? "mr.bodyDone" : "mr.bodyFresh")
+            bannerBody = localized(pushed ? "mr.bodyDone" : "mr.bodyFresh")
         case .testsFailed:
-            statusText = L("mr.testsFailed")
+            statusText = localized("mr.testsFailed")
             icon = .cross
             tone = .red
             bannerTitle = statusText
-            bannerBody = L("mr.bodyTests")
+            bannerBody = localized("mr.bodyTests")
             actions = [.retry, .fix]
             canFix = true
         case .ciFailed(let job):
-            statusText = L("mr.ciFailed")
+            statusText = localized("mr.ciFailed")
             icon = .cross
             tone = .red
-            bannerTitle = L("mr.bnCi", job)
-            bannerBody = L("mr.bodyCi")
+            bannerTitle = localized("mr.bnCi", job)
+            bannerBody = localized("mr.bodyCi")
             actions = (run.pipelineID == nil ? [] : [.rerunCI]) + [.fix]
             canFix = true
         case .conflict(let files):
-            statusText = L("mr.conflict")
+            statusText = localized("mr.conflict")
             icon = .cross
             tone = .red
-            bannerTitle = L("mr.bnConflict", files.count)
-            bannerBody = L("mr.bodyConflict")
+            bannerTitle = localized("mr.bnConflict", files.count)
+            bannerBody = localized("mr.bodyConflict")
             actions = [.fix]
             canFix = true
         case .branchChanged:
-            statusText = L("mr.pushRejected")
+            statusText = localized("mr.pushRejected")
             icon = .redo
             tone = .orange
             bannerTitle = statusText
-            bannerBody = L("mr.bodyPush")
+            bannerBody = localized("mr.bodyPush")
         case .pushFailed(let message):
             statusText = Self.stageName(.push)
             icon = .cross
@@ -138,23 +138,24 @@ struct MRPresentation: Equatable {
         group = .fine
         switch fix.phase {
         case .fixing:
-            statusText = L("fix.claudeFixing")
+            statusText = localized("fix.claudeFixing")
             icon = .claudeSpinner
             tone = .purple
             bannerTitle = statusText
-            bannerBody = fix[.claude].log.last { $0.kind == .claude || $0.kind == .tool }?.text ?? L("fix.bn.starting")
+            bannerBody =
+                fix[.claude].log.last { $0.kind == .claude || $0.kind == .tool }?.text ?? localized("fix.bn.starting")
             actions = [.stopFix]
         case .checking:
             let stage = fix.stages.first { $0.state == .running } ?? fix[.retest]
             statusText = Self.stageName(stage.kind) + "…"
             icon = .spinner
             tone = .blue
-            bannerTitle = L("fix.bn.checking")
+            bannerTitle = localized("fix.bn.checking")
             let subtitle = Self.subtitle(stage)
             bannerBody = subtitle.isEmpty ? Self.stageName(stage.kind) : Self.stageName(stage.kind) + " · " + subtitle
             actions = [.stopFix]
         case .ready:
-            statusText = L("fix.waitReview")
+            statusText = localized("fix.waitReview")
             icon = .dots
             tone = .purple
             bannerTitle = statusText
@@ -162,34 +163,34 @@ struct MRPresentation: Equatable {
             bodyLines = 2
             actions = [.reject, .view]
         case .pushing:
-            statusText = L("fix.bn.pushing")
+            statusText = localized("fix.bn.pushing")
             icon = .spinner
             tone = .blue
             bannerTitle = statusText
             bannerBody = Self.subtitle(fix[.push])
         case .ci:
-            statusText = L("fix.bn.ci")
+            statusText = localized("fix.bn.ci")
             icon = .spinner
             tone = .blue
             bannerTitle = statusText
-            bannerBody = L("mr.sub.pipeline")
+            bannerBody = localized("mr.sub.pipeline")
         case .pushed:
-            statusText = L("fix.fixedByClaude")
+            statusText = localized("fix.fixedByClaude")
             icon = .check
             tone = .green
-            bannerTitle = L("fix.bn.pushed")
+            bannerTitle = localized("fix.bn.pushed")
             bannerBody = fix.summary
             bodyLines = 2
             actions = [.revert, .view]
         case .gaveUp:
-            statusText = L("fix.claudeGaveUp")
+            statusText = localized("fix.claudeGaveUp")
             icon = .cross
             tone = .red
             bannerTitle = statusText
-            bannerBody = L("fix.gaveUpBody", fix.attempt)
+            bannerBody = localized("fix.gaveUpBody", fix.attempt)
             actions = [.terminal, .retryFix]
         case .terminal:
-            statusText = L("fix.terminalStatus")
+            statusText = localized("fix.terminalStatus")
             icon = .dots
             tone = .purple
             bannerTitle = statusText
@@ -202,7 +203,7 @@ struct MRPresentation: Equatable {
             icon = base.icon
             tone = base.tone
             bannerTitle = base.bannerTitle
-            bannerBody = L(
+            bannerBody = localized(
                 fix.phase == .rejected
                     ? "fix.bn.rejected" : fix.phase == .stopped ? "fix.bn.stopped" : "fix.bn.reverted")
             actions = base.actions
@@ -234,34 +235,34 @@ struct MRPresentation: Equatable {
 
     static func stageName(_ kind: StageKind) -> String {
         switch kind {
-        case .claude: L("fix.stage.claude")
-        case .continueRebase: L("mr.stage.rebase")
-        case .retest: L("mr.stage.test")
-        default: L("mr.stage.\(kind.rawValue)")
+        case .claude: localized("fix.stage.claude")
+        case .continueRebase: localized("mr.stage.rebase")
+        case .retest: localized("mr.stage.test")
+        default: localized("mr.stage.\(kind.rawValue)")
         }
     }
 
     static func subtitle(_ stage: Stage) -> String {
         switch stage.caption {
-        case .onto: L("mr.sub.onto", stage.detail)
-        case .notNeeded: L("mr.notNeeded")
-        case .ciPassed: L("mr.ciPassed")
-        case .conflictFiles: L("mr.conflictSub", Int(stage.detail) ?? 0)
-        case .pushRejected: L("mr.pushRejectSub")
-        case .ciFailed: L("mr.ciFailSub", stage.detail)
+        case .onto: localized("mr.sub.onto", stage.detail)
+        case .notNeeded: localized("mr.notNeeded")
+        case .ciPassed: localized("mr.ciPassed")
+        case .conflictFiles: localized("mr.conflictSub", Int(stage.detail) ?? 0)
+        case .pushRejected: localized("mr.pushRejectSub")
+        case .ciFailed: localized("mr.ciFailSub", stage.detail)
         case .command: stage.detail
-        case .pipeline: L("mr.sub.pipeline")
+        case .pipeline: localized("mr.sub.pipeline")
         case .none: ""
         case .claudeAttempt:
             numbers(stage.detail).count == 2
-                ? L("fix.claudeRun", numbers(stage.detail)[0], numbers(stage.detail)[1]) : ""
+                ? localized("fix.claudeRun", numbers(stage.detail)[0], numbers(stage.detail)[1]) : ""
         case .claudeChanged:
             numbers(stage.detail).count == 3
-                ? L("fix.files", numbers(stage.detail)[0]) + " · "
+                ? localized("fix.files", numbers(stage.detail)[0]) + " · "
                     + stat(added: numbers(stage.detail)[1], removed: numbers(stage.detail)[2]) : ""
-        case .claudeResolved: L("fix.claudeResolved", Int(stage.detail) ?? 0)
-        case .claudeFailed: L("fix.claudeFail", Int(stage.detail) ?? 0)
-        case .afterFix: L("fix.sub.afterFix", stage.detail)
+        case .claudeResolved: localized("fix.claudeResolved", Int(stage.detail) ?? 0)
+        case .claudeFailed: localized("fix.claudeFail", Int(stage.detail) ?? 0)
+        case .afterFix: localized("fix.sub.afterFix", stage.detail)
         }
     }
 
@@ -281,11 +282,11 @@ struct MRPresentation: Equatable {
         formatter.minimumFractionDigits = 1
         formatter.maximumFractionDigits = 1
         formatter.minimumIntegerDigits = 1
-        return (formatter.string(from: NSNumber(value: seconds)) ?? "") + " " + L("mr.sec")
+        return (formatter.string(from: NSNumber(value: seconds)) ?? "") + " " + localized("mr.sec")
     }
 
     static func text(_ line: LogLine) -> String {
-        line.kind == .note ? L("mr.note.\(line.text)") : line.text
+        line.kind == .note ? localized("mr.note.\(line.text)") : line.text
     }
 
     static func displayKind(_ line: LogLine, stageState: StageState) -> LogLine.Kind {
@@ -306,8 +307,8 @@ struct MRPresentation: Equatable {
 
     static func groups(_ items: [(MergeRequest, MRRun)]) -> [(title: String, items: [(MergeRequest, MRRun)])] {
         let titled: [(Group, String)] = [
-            (.decide, L("fix.grpDecide")), (.working, L("mr.grpWorking")),
-            (.attention, L("mr.grpAttention")), (.fine, L("mr.grpFine")),
+            (.decide, localized("fix.grpDecide")), (.working, localized("mr.grpWorking")),
+            (.attention, localized("mr.grpAttention")), (.fine, localized("mr.grpFine")),
         ]
         return titled.map { group, title in (title, items.filter { MRPresentation($0.1).group == group }) }.filter {
             !$0.1.isEmpty
@@ -315,14 +316,14 @@ struct MRPresentation: Equatable {
     }
 
     static func subtitle(project: Project, count: Int, checkedAt: Date?, now: Date = Date()) -> String {
-        var parts = [project.path, count == 0 ? L("mr.subtitleEmpty") : L("mr.count", count)]
+        var parts = [project.path, count == 0 ? localized("mr.subtitleEmpty") : localized("mr.count", count)]
         if count > 0, let checkedAt { parts.append(checked(checkedAt, now: now)) }
         return parts.joined(separator: " · ")
     }
 
     static func checked(_ date: Date, now: Date = Date()) -> String {
-        if now.timeIntervalSince(date) < 60 { return L("mr.checkedNow") }
-        return L("mr.checkedAgo", relative(date, now: now))
+        if now.timeIntervalSince(date) < 60 { return localized("mr.checkedNow") }
+        return localized("mr.checkedAgo", relative(date, now: now))
     }
 
     static func relative(_ date: Date, now: Date = Date()) -> String {

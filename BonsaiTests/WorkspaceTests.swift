@@ -268,14 +268,14 @@ struct SchedulerTests {
     let dir = FileManager.default.temporaryDirectory.appendingPathComponent("bonsai-sched-\(UUID().uuidString)")
     let keychain = Keychain(service: "dev.txssu.Bonsai.tests.\(UUID().uuidString)")
 
-    @Test func pauseForAnHourAndResume() {
+    @Test func pauseForAnHourAndResume() throws {
         let store = Store(directory: dir, keychain: keychain)
         let scheduler = Scheduler(workspace: Workspace(store: store))
         #expect(!scheduler.isPaused)
         scheduler.pauseForHour()
         #expect(scheduler.isPaused)
-        let until = try? #require(scheduler.pausedUntil)
-        #expect(abs((until ?? Date()).timeIntervalSinceNow - 3600) < 5)
+        let until = try #require(scheduler.pausedUntil)
+        #expect(abs(until.timeIntervalSinceNow - 3600) < 5)
         #expect(Store(directory: dir, keychain: keychain).pausedUntil != nil)
         scheduler.resume()
         #expect(!scheduler.isPaused)

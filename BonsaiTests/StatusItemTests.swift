@@ -29,15 +29,18 @@ struct StatusItemTests {
         let controller = StatusItemController(app: app)
         controller.menuNeedsUpdate(controller.menu)
         let titles = controller.menu.items.map(\.title)
-        #expect(titles.contains(L("menu.attention")))
+        #expect(titles.contains(localized("menu.attention")))
         #expect(titles.contains { $0.hasPrefix("Новый формат экспорта CSV") })
-        #expect(titles.contains(L("menu.fresh", 1)))
-        #expect(Array(titles.suffix(4)) == [L("menu.open"), L("menu.pause"), L("menu.settings"), L("menu.quit")])
+        #expect(titles.contains(localized("menu.fresh", 1)))
+        #expect(
+            Array(titles.suffix(4)) == [
+                localized("menu.open"), localized("menu.pause"), localized("menu.settings"), localized("menu.quit"),
+            ])
         #expect(controller.menu.items.last?.keyEquivalent == "q")
         #expect(controller.isDotShown)
 
         app.scheduler.pauseForHour()
         controller.menuNeedsUpdate(controller.menu)
-        #expect(controller.menu.items.map(\.title).contains(L("menu.resume")))
+        #expect(controller.menu.items.map(\.title).contains(localized("menu.resume")))
     }
 }

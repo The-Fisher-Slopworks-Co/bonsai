@@ -77,10 +77,6 @@ final class Workspace {
 
     var isChecking: Bool { !workers.isEmpty }
 
-    var isWorking: Bool {
-        runs.values.contains { if case .running = $0.status { true } else { false } }
-    }
-
     var allMergeRequests: [(MergeRequest, Project)] {
         store.projects.flatMap { project in state(project).mergeRequests.map { ($0, project) } }
     }
@@ -126,8 +122,8 @@ final class Workspace {
     }
 
     func cancelAll() {
-        workers.values.forEach { $0.cancel() }
-        mrTasks.values.forEach { $0.cancel() }
+        for worker in workers.values { worker.cancel() }
+        for task in mrTasks.values { task.cancel() }
     }
 
     func checkAll() {
@@ -374,7 +370,7 @@ final class Workspace {
         config.language = FixPrompt.languageName(Bundle.main.preferredLocalizations.first ?? "en")
         config.ciPollInterval = pipelineConfig.ciPollInterval
         config.ciAppearTimeout = pipelineConfig.ciAppearTimeout
-        let rules = store.settings.claude.rules ?? L("settings.rulesDefault")
+        let rules = store.settings.claude.rules ?? localized("settings.rulesDefault")
         return FixPipeline(mr: mr, project: project, effects: effects, rules: rules, config: config)
     }
 
@@ -527,7 +523,7 @@ final class Signal: @unchecked Sendable {
             defer { waiters = [] }
             return waiters
         }
-        pending.forEach { $0.resume() }
+        for waiter in pending { waiter.resume() }
     }
 
     func wait() async {

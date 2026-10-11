@@ -1,0 +1,14 @@
+pre-commit:
+  jobs:
+    - name: format
+      glob: "*.swift"
+      run: xcrun swift-format lint --strict {staged_files}
+
+    - name: unused
+      run: tools/check.sh unused
+
+    - name: reuse
+      run: tools/check.sh reuse
+
+    - name: test
+      run: tools/check.sh test

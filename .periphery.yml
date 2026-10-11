@@ -1,0 +1,8 @@
+project: Bonsai.xcodeproj
+schemes:
+  - Bonsai
+retain_assign_only_properties: true
+retain_swift_ui_previews: true
+relative_results: true
+quiet: true
+strict: true

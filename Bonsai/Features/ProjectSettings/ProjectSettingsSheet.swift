@@ -23,10 +23,12 @@ struct ProjectSettingsSheet: View {
             .padding(.bottom, 16)
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 12, verticalSpacing: 14) {
                 GridRow(alignment: .center) {
-                    label(L("projects.branch"))
-                    Picker(L("projects.branch"), selection: $model.draft.targetBranch) {
+                    label(localized("projects.branch"))
+                    Picker(localized("projects.branch"), selection: $model.draft.targetBranch) {
                         ForEach(model.branchNames, id: \.self) { name in
-                            Text(verbatim: model.isDefault(name) ? "\(name) — \(L("projects.defaultTag"))" : name).tag(
+                            Text(
+                                verbatim: model.isDefault(name) ? "\(name) — \(localized("projects.defaultTag"))" : name
+                            ).tag(
                                 name)
                         }
                     }
@@ -34,12 +36,13 @@ struct ProjectSettingsSheet: View {
                     .fixedSize()
                 }
                 GridRow {
-                    label(L("projects.setup"))
-                    command($model.draft.setup, placeholder: "./scripts/setup.sh", hint: L("projects.setupHint"))
+                    label(localized("projects.setup"))
+                    command(
+                        $model.draft.setup, placeholder: "./scripts/setup.sh", hint: localized("projects.setupHint"))
                 }
                 GridRow {
-                    label(L("projects.test"))
-                    command($model.draft.test, placeholder: "make test", hint: L("projects.testHint"))
+                    label(localized("projects.test"))
+                    command($model.draft.test, placeholder: "make test", hint: localized("projects.testHint"))
                 }
                 Divider().gridCellColumns(2)
                 GridRow(alignment: .firstTextBaseline) {
@@ -51,7 +54,7 @@ struct ProjectSettingsSheet: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Picker("Claude", selection: $model.draft.claude) {
                             ForEach(ClaudeMode.allCases, id: \.self) { mode in
-                                Text(verbatim: L("ps.claude.\(mode.rawValue)")).tag(mode)
+                                Text(verbatim: localized("ps.claude.\(mode.rawValue)")).tag(mode)
                             }
                         }
                         .labelsHidden()
@@ -62,14 +65,15 @@ struct ProjectSettingsSheet: View {
                     }
                 }
                 GridRow {
-                    label(L("ps.notes"))
+                    label(localized("ps.notes"))
                     VStack(alignment: .leading, spacing: 4) {
                         TextField(
-                            "", text: $model.draft.rules, prompt: Text(verbatim: L("ps.notesPh")), axis: .vertical
+                            "", text: $model.draft.rules, prompt: Text(verbatim: localized("ps.notesPh")),
+                            axis: .vertical
                         )
                         .lineLimit(3...5)
                         .textFieldStyle(.roundedBorder)
-                        Text(verbatim: L("ps.notesHint")).font(.system(size: 11)).foregroundStyle(.secondary)
+                        Text(verbatim: localized("ps.notesHint")).font(.system(size: 11)).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     .disabled(model.draft.claude == .off)
@@ -78,9 +82,9 @@ struct ProjectSettingsSheet: View {
             }
             HStack {
                 Spacer()
-                Button(L("projects.cancel"), role: .cancel) { dismiss() }
+                Button(localized("projects.cancel"), role: .cancel) { dismiss() }
                     .keyboardShortcut(.cancelAction)
-                Button(L("ps.save")) {
+                Button(localized("ps.save")) {
                     onSave(model.saved())
                     dismiss()
                 }

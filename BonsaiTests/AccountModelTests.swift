@@ -33,7 +33,7 @@ struct AccountModelTests {
         defer { app.store.signOut() }
         await model.refresh()
         #expect(model.connection == .tokenExpired)
-        #expect(model.tokenText == L("settings.tokenExpired").lowercased())
+        #expect(model.tokenText == localized("settings.tokenExpired").lowercased())
     }
 
     @Test func pastExpiryIsExpiredWithoutRequest() async throws {

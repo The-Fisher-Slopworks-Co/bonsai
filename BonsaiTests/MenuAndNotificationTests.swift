@@ -82,13 +82,13 @@ struct MenuBarModelTests {
                 (mr(4), run(.upToDate(pushed: false))), (mr(5), run(.conflict(files: ["a"]))),
             ],
             isChecking: false, lastCheck: Date(), pausedUntil: nil)
-        #expect(model.sections.map(\.title) == [L("menu.inProgress"), L("menu.attention")])
+        #expect(model.sections.map(\.title) == [localized("menu.inProgress"), localized("menu.attention")])
         #expect(model.sections[0].items.map(\.iid) == [1])
         #expect(model.sections[1].items.map(\.iid) == [2, 5])
         #expect(model.freshCount == 2)
         #expect(model.hasProblems)
         #expect(model.isWorking)
-        #expect(model.headerText == L("menu.checkedNow"))
+        #expect(model.headerText == localized("menu.checkedNow"))
     }
 
     @Test func calmMenu() {
@@ -98,7 +98,7 @@ struct MenuBarModelTests {
         #expect(!model.hasProblems)
         #expect(!model.isWorking)
         #expect(model.header == .checking)
-        #expect(model.headerText == L("menu.checking"))
+        #expect(model.headerText == localized("menu.checking"))
     }
 
     @Test func pausedHeader() {
@@ -112,7 +112,7 @@ struct MenuBarModelTests {
     @Test func freshPlural() throws {
         let path = try #require(Bundle.main.path(forResource: "ru", ofType: "lproj"))
         let ru = try #require(Bundle(path: path))
-        #expect(L("menu.fresh", bundle: ru, [1]) == "Ещё 1 MR актуален")
-        #expect(L("menu.fresh", bundle: ru, [3]) == "Ещё 3 MR актуальны")
+        #expect(localized("menu.fresh", bundle: ru, [1]) == "Ещё 1 MR актуален")
+        #expect(localized("menu.fresh", bundle: ru, [3]) == "Ещё 3 MR актуальны")
     }
 }

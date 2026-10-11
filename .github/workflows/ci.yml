@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Lint & tests
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Select Xcode 27
+        run: sudo xcode-select -s "$(ls -d /Applications/Xcode_27*.app | sort -V | tail -1)"
+
+      - name: Install tools
+        run: brew install xcodegen periphery
+
+      - name: Format
+        run: tools/check.sh format
+
+      - name: Unused code
+        run: tools/check.sh unused
+
+      - name: Run tests
+        run: tools/check.sh test

@@ -35,9 +35,9 @@ final class AddProjectModel {
 
     var testHint: String {
         if let detectedFrom, !test.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return L("projects.foundIn", detectedFrom) + " " + L("projects.testHint")
+            return localized("projects.foundIn", detectedFrom) + " " + localized("projects.testHint")
         }
-        return L("projects.testHint")
+        return localized("projects.testHint")
     }
 
     func start() {

@@ -8,9 +8,9 @@ final class AccountModel {
 
         var title: String {
             switch self {
-            case .connected: L("settings.connected")
-            case .tokenExpired: L("settings.tokenExpired")
-            case .unreachable: L("settings.unreachable")
+            case .connected: localized("settings.connected")
+            case .tokenExpired: localized("settings.tokenExpired")
+            case .unreachable: localized("settings.unreachable")
             }
         }
 
@@ -33,9 +33,9 @@ final class AccountModel {
     }
 
     var tokenText: String? {
-        if connection == .tokenExpired { return L("settings.tokenExpired").lowercased() }
+        if connection == .tokenExpired { return localized("settings.tokenExpired").lowercased() }
         guard let date = app.store.account?.tokenExpiresAt else { return nil }
-        return L("settings.tokenUntil", date.formatted(date: .numeric, time: .omitted))
+        return localized("settings.tokenUntil", date.formatted(date: .numeric, time: .omitted))
     }
 
     func refresh() async {

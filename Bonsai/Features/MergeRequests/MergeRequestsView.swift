@@ -2,7 +2,6 @@ import SwiftUI
 
 struct ProjectDetail: View {
     @Environment(Workspace.self) private var workspace
-    @Environment(Scheduler.self) private var scheduler
     let project: Project
     @Binding var selection: String?
 
@@ -12,19 +11,19 @@ struct ProjectDetail: View {
             if state.loading == .loading {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text(verbatim: L("projects.loading")).foregroundStyle(.secondary)
+                    Text(verbatim: localized("projects.loading")).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if state.mergeRequests.isEmpty {
                 ContentUnavailableView {
                     Label {
-                        Text(verbatim: L("mr.noMrsTitle"))
+                        Text(verbatim: localized("mr.noMrsTitle"))
                     } icon: {
                         Image("ProjectGlyph").resizable().frame(width: 48, height: 48)
                     }
                 } description: {
                     if let minutes = workspace.store.settings.interval.seconds.map({ Int($0 / 60) }) {
-                        Text(verbatim: L("mr.noMrsBody", minutes))
+                        Text(verbatim: localized("mr.noMrsBody", minutes))
                     }
                 }
             } else {
@@ -67,7 +66,7 @@ struct MRList: View {
                 }
             }
         }
-        .accessibilityLabel(L("mr.list"))
+        .accessibilityLabel(localized("mr.list"))
     }
 }
 
@@ -128,7 +127,7 @@ struct MRDetail: View {
                         }
                     }
                 }
-                .accessibilityLabel(L("mr.stagesTitle"))
+                .accessibilityLabel(localized("mr.stagesTitle"))
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 20)
@@ -139,11 +138,11 @@ struct MRDetail: View {
                 FixReviewSheet(mr: mr, fix: fix)
             }
         }
-        .alert(L("fix.revertTitle"), isPresented: $confirmRevert) {
-            Button(L("projects.cancel"), role: .cancel) {}
-            Button(L("fix.revert"), role: .destructive) { workspace.revertFix(mr) }
+        .alert(localized("fix.revertTitle"), isPresented: $confirmRevert) {
+            Button(localized("projects.cancel"), role: .cancel) {}
+            Button(localized("fix.revert"), role: .destructive) { workspace.revertFix(mr) }
         } message: {
-            Text(verbatim: L("fix.revertBody"))
+            Text(verbatim: localized("fix.revertBody"))
         }
     }
 
@@ -165,7 +164,7 @@ struct MRDetail: View {
             }
             Spacer(minLength: 0)
             Link(destination: mr.webURL) {
-                Label(L("mr.openInGitlab"), systemImage: "arrow.up.right")
+                Label(localized("mr.openInGitlab"), systemImage: "arrow.up.right")
                     .labelStyle(.titleAndIcon)
             }
             .buttonStyle(.bordered)
@@ -325,7 +324,7 @@ struct LogBox: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if thinking {
-                    Text(verbatim: L("fix.thinking"))
+                    Text(verbatim: localized("fix.thinking"))
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
                 }
@@ -400,16 +399,16 @@ extension MRPresentation.Tone {
 extension MRPresentation.Action {
     var title: String {
         switch self {
-        case .run: L("mr.runNow")
-        case .stop, .stopFix: L("mr.stop")
-        case .retry, .retryFix: L("mr.retry")
-        case .rerunCI: L("mr.rerunCi")
-        case .fix: L("mr.fix")
-        case .reject: L("fix.reject")
-        case .view: L("fix.view")
-        case .revert: L("fix.revert") + "…"
-        case .terminal: L("fix.terminal")
-        case .recheck: L("fix.recheck")
+        case .run: localized("mr.runNow")
+        case .stop, .stopFix: localized("mr.stop")
+        case .retry, .retryFix: localized("mr.retry")
+        case .rerunCI: localized("mr.rerunCi")
+        case .fix: localized("mr.fix")
+        case .reject: localized("fix.reject")
+        case .view: localized("fix.view")
+        case .revert: localized("fix.revert") + "…"
+        case .terminal: localized("fix.terminal")
+        case .recheck: localized("fix.recheck")
         }
     }
 }

@@ -57,7 +57,7 @@ struct WorkspaceFixTests {
         let pushed = f.workspace.run(mr)
         #expect(pushed.fix?.phase == .pushed)
         #expect(pushed.status == .upToDate(pushed: true))
-        #expect(MRPresentation(pushed).statusText == L("fix.fixedByClaude"))
+        #expect(MRPresentation(pushed).statusText == localized("fix.fixedByClaude"))
         let origin = try await f.repo.sh("git --git-dir=\(f.repo.origin.path) rev-parse feature", in: f.repo.root)
         #expect(origin == pushed.fix?.pushedSHA)
         #expect(f.workspace.canRevert(mr))
@@ -82,7 +82,7 @@ struct WorkspaceFixTests {
         #expect(f.workspace.run(mr).fix?.phase == .ready)
         f.workspace.rejectFix(mr)
         #expect(f.workspace.run(mr).fix?.phase == .rejected)
-        #expect(MRPresentation(f.workspace.run(mr)).bannerBody == L("fix.bn.rejected"))
+        #expect(MRPresentation(f.workspace.run(mr)).bannerBody == localized("fix.bn.rejected"))
         #expect(MRPresentation(f.workspace.run(mr)).group == .attention)
     }
 

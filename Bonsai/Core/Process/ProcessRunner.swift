@@ -87,8 +87,8 @@ private final class Spawned: @unchecked Sendable {
         let argv = ([executable] + arguments).map { strdup($0) } + [nil]
         let envp = env.map { strdup("\($0.key)=\($0.value)") } + [nil]
         defer {
-            argv.forEach { free($0) }
-            envp.forEach { free($0) }
+            for arg in argv { free(arg) }
+            for entry in envp { free(entry) }
         }
         var child: pid_t = 0
         let rc = posix_spawn(&child, executable, &actions, &attributes, argv, envp)

@@ -40,18 +40,18 @@ struct MainView: View {
             }
         }
         .alert(
-            removing.map { L("ps.alertTitle", $0.name) } ?? "",
+            removing.map { localized("ps.alertTitle", $0.name) } ?? "",
             isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })
         ) {
-            Button(L("projects.cancel"), role: .cancel) { removing = nil }
-            Button(L("ps.delete"), role: .destructive) {
+            Button(localized("projects.cancel"), role: .cancel) { removing = nil }
+            Button(localized("ps.delete"), role: .destructive) {
                 guard let project = removing else { return }
                 removing = nil
                 if selection == project.id { selection = store.projects.first { $0.id != project.id }?.id }
                 Task { await workspace.remove(project) }
             }
         } message: {
-            Text(verbatim: L("ps.alertBody"))
+            Text(verbatim: localized("ps.alertBody"))
         }
         .onAppear {
             if selection == nil { selection = store.projects.first?.id }
@@ -69,7 +69,7 @@ struct MainView: View {
 
     private var sidebar: some View {
         List(selection: $selection) {
-            Section(L("projects.title")) {
+            Section(localized("projects.title")) {
                 ForEach(store.projects) { project in
                     ProjectRow(project: project)
                         .tag(project.id)
@@ -80,11 +80,11 @@ struct MainView: View {
     }
 
     @ViewBuilder private func contextMenu(_ project: Project) -> some View {
-        Button(L("ps.mSettings")) { editing = project }
-        Button(L(project.paused ? "ps.mResume" : "ps.mPause")) { togglePause(project) }
-        Link(L("ps.mOpenGitlab"), destination: project.webURL)
+        Button(localized("ps.mSettings")) { editing = project }
+        Button(localized(project.paused ? "ps.mResume" : "ps.mPause")) { togglePause(project) }
+        Link(localized("ps.mOpenGitlab"), destination: project.webURL)
         Divider()
-        Button(L("ps.mDelete"), role: .destructive) { removing = project }
+        Button(localized("ps.mDelete"), role: .destructive) { removing = project }
     }
 
     private func togglePause(_ project: Project) {
@@ -106,22 +106,22 @@ struct MainView: View {
             Button {
                 scheduler.checkNow()
             } label: {
-                Label(L("projects.refresh"), systemImage: "arrow.clockwise")
+                Label(localized("projects.refresh"), systemImage: "arrow.clockwise")
             }
-            .help(L("projects.refresh"))
+            .help(localized("projects.refresh"))
             .disabled(store.projects.isEmpty)
             Button {
                 addingProject = true
             } label: {
-                Label(L("projects.addAria"), systemImage: "plus")
+                Label(localized("projects.addAria"), systemImage: "plus")
             }
-            .help(L("projects.addAria"))
+            .help(localized("projects.addAria"))
             Button {
                 editing = selected
             } label: {
-                Label(L("mr.projectSettings"), systemImage: "slider.horizontal.3")
+                Label(localized("mr.projectSettings"), systemImage: "slider.horizontal.3")
             }
-            .help(L("mr.projectSettings"))
+            .help(localized("mr.projectSettings"))
             .disabled(selected == nil)
         }
     }
@@ -130,14 +130,14 @@ struct MainView: View {
         if store.projects.isEmpty {
             ContentUnavailableView {
                 Label {
-                    Text(verbatim: L("projects.emptyTitle"))
+                    Text(verbatim: localized("projects.emptyTitle"))
                 } icon: {
                     Image("ProjectGlyph").resizable().frame(width: 48, height: 48)
                 }
             } description: {
-                Text(verbatim: L("projects.emptyBody"))
+                Text(verbatim: localized("projects.emptyBody"))
             } actions: {
-                Button(L("projects.add")) { addingProject = true }
+                Button(localized("projects.add")) { addingProject = true }
             }
         } else if let project = selected {
             ProjectDetail(
@@ -169,8 +169,8 @@ struct ProjectRow: View {
             if project.paused {
                 Image(systemName: "pause.circle")
                     .foregroundStyle(.secondary)
-                    .help(L("ps.paused"))
-                    .accessibilityLabel(L("ps.paused"))
+                    .help(localized("ps.paused"))
+                    .accessibilityLabel(localized("ps.paused"))
             }
             if busy {
                 ProgressView().controlSize(.mini)

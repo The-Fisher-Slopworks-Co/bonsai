@@ -1,10 +1,10 @@
 import Foundation
 
-func L(_ key: String, _ args: any CVarArg...) -> String {
-    L(key, bundle: .main, args)
+func localized(_ key: String, _ args: any CVarArg...) -> String {
+    localized(key, bundle: .main, args)
 }
 
-func L(_ key: String, bundle: Bundle, _ args: [any CVarArg]) -> String {
+func localized(_ key: String, bundle: Bundle, _ args: [any CVarArg]) -> String {
     let format = bundle.localizedString(forKey: key, value: nil, table: nil)
     guard !args.isEmpty else { return format }
     let language =

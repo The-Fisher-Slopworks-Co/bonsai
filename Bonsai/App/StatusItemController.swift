@@ -90,17 +90,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         }
         if model.freshCount > 0 {
             menu.addItem(.separator())
-            let fresh = NSMenuItem(title: L("menu.fresh", model.freshCount), action: nil, keyEquivalent: "")
+            let fresh = NSMenuItem(title: localized("menu.fresh", model.freshCount), action: nil, keyEquivalent: "")
             fresh.image = Self.icon(.check, size: 14)
             fresh.isEnabled = false
             menu.addItem(fresh)
         }
 
         menu.addItem(.separator())
-        menu.addItem(action(L("menu.open"), #selector(openBonsai)))
-        menu.addItem(action(L(model.isPaused ? "menu.resume" : "menu.pause"), #selector(togglePause)))
-        menu.addItem(action(L("menu.settings"), #selector(openSettings), key: ","))
-        menu.addItem(action(L("menu.quit"), #selector(quit), key: "q"))
+        menu.addItem(action(localized("menu.open"), #selector(openBonsai)))
+        menu.addItem(action(localized(model.isPaused ? "menu.resume" : "menu.pause"), #selector(togglePause)))
+        menu.addItem(action(localized("menu.settings"), #selector(openSettings), key: ","))
+        menu.addItem(action(localized("menu.quit"), #selector(quit), key: "q"))
     }
 
     private func action(_ title: String, _ selector: Selector, key: String = "") -> NSMenuItem {
@@ -184,8 +184,8 @@ private struct MenuHeader: View {
                 Image(systemName: "arrow.clockwise")
             }
             .buttonStyle(.borderless)
-            .help(L("menu.refresh"))
-            .accessibilityLabel(L("menu.refresh"))
+            .help(localized("menu.refresh"))
+            .accessibilityLabel(localized("menu.refresh"))
         }
         .padding(.leading, 14)
         .padding(.trailing, 10)
