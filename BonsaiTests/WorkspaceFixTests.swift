@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @MainActor
@@ -27,9 +28,14 @@ struct WorkspaceFixTests {
     @Test func autoFixAfterTestsFailThenPush() async throws {
         var notes: [String] = []
         let f = try await fixture(claude: Self.fixing)
-        defer { f.store.signOut(); f.repo.remove() }
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
         f.workspace.onStatusChange = { change in
-            if let note = NotificationRules.note(for: change, settings: NotificationSettings()) { notes.append(note.title) }
+            if let note = NotificationRules.note(for: change, settings: NotificationSettings()) {
+                notes.append(note.title)
+            }
         }
         f.workspace.add(f.project)
         let mr = try await firstMR(f)
@@ -59,7 +65,10 @@ struct WorkspaceFixTests {
 
     @Test func manualModeOffersFixButton() async throws {
         let f = try await fixture(claude: Self.fixing) { $0.settings.claude.onTests = false }
-        defer { f.store.signOut(); f.repo.remove() }
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
         f.workspace.add(f.project)
         await f.workspace.waitUntilIdle()
         let mr = try await firstMR(f)
@@ -79,7 +88,10 @@ struct WorkspaceFixTests {
 
     @Test func claudeOffForProjectHidesFix() async throws {
         let f = try await fixture(claude: Self.fixing)
-        defer { f.store.signOut(); f.repo.remove() }
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
         var project = f.project
         project.claude = .off
         f.workspace.add(project)
@@ -92,7 +104,10 @@ struct WorkspaceFixTests {
     @Test func gaveUpThenTerminalThenRecheck() async throws {
         let stubborn = FakeClaude { _, _ in ok("Не вышло.") }
         let f = try await fixture(claude: stubborn)
-        defer { f.store.signOut(); f.repo.remove() }
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
         var opened: URL?
         f.workspace.openTerminal = { opened = $0 }
         f.workspace.add(f.project)
@@ -109,7 +124,8 @@ struct WorkspaceFixTests {
         #expect(MRPresentation(f.workspace.run(mr)).group == .decide)
 
         let worktree = try #require(f.workspace.run(mr).fix?.worktree)
-        try "yes\n".write(to: URL(fileURLWithPath: worktree).appendingPathComponent("fixed"), atomically: true, encoding: .utf8)
+        try "yes\n".write(
+            to: URL(fileURLWithPath: worktree).appendingPathComponent("fixed"), atomically: true, encoding: .utf8)
         f.workspace.recheckFix(mr)
         await f.workspace.waitUntilIdle()
         #expect(f.workspace.run(mr).fix?.phase == .ready)

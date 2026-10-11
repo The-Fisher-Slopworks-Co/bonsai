@@ -1,8 +1,11 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
-@Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["BONSAI_LIVE_CLAUDE"] == "1" && LiveGitLab.isAvailable))
+@Suite(
+    .serialized,
+    .enabled(if: ProcessInfo.processInfo.environment["BONSAI_LIVE_CLAUDE"] == "1" && LiveGitLab.isAvailable))
 struct LiveClaudeTests {
     @Test(.timeLimit(.minutes(10)))
     func fixFailingTestAndConflict() async throws {
@@ -25,16 +28,22 @@ struct LiveClaudeTests {
         config.ciPollInterval = 3
 
         let failing = try #require(mrs.first { $0.sourceBranch == "feature/failing-test" })
-        let failedRun = await MRPipeline(mr: failing, project: project, effects: LivePipelineEffects(git: clone, gitlab: gitlab, projectID: id))
-            .execute(RunRecorder(MRRun()) { _ in })
+        let failedRun = await MRPipeline(
+            mr: failing, project: project, effects: LivePipelineEffects(git: clone, gitlab: gitlab, projectID: id)
+        )
+        .execute(RunRecorder(MRRun()) { _ in })
         #expect(failedRun.status == .testsFailed)
-        let effects = LiveFixEffects(clone: clone, worktree: root.appendingPathComponent("fixes/tests"), gitlab: gitlab, projectID: id,
-                                     claudePath: claudePath, runner: runner)
-        let fixer = FixPipeline(mr: failing, project: project, effects: effects, rules: L("settings.rulesDefault"), config: config)
+        let effects = LiveFixEffects(
+            clone: clone, worktree: root.appendingPathComponent("fixes/tests"), gitlab: gitlab, projectID: id,
+            claudePath: claudePath, runner: runner)
+        let fixer = FixPipeline(
+            mr: failing, project: project, effects: effects, rules: L("settings.rulesDefault"), config: config)
         let recorder = RunRecorder(failedRun) { _ in }
         let fixed = await fixer.fix(.tests, recorder)
         let fix = try #require(fixed.fix)
-        print("LIVE tests fix:", fix.phase, fix.summary, "|", fix.commitMessage, fix.files.map(\.path), fix[.claude].log.map(\.text))
+        print(
+            "LIVE tests fix:", fix.phase, fix.summary, "|", fix.commitMessage, fix.files.map(\.path),
+            fix[.claude].log.map(\.text))
         #expect(fix.phase == .ready)
         #expect(fix.sessionID != nil)
         #expect(!fix.summary.isEmpty)
@@ -46,16 +55,23 @@ struct LiveClaudeTests {
         #expect(pushed.status == .upToDate(pushed: true))
 
         let conflictMR = try #require(mrs.first { $0.sourceBranch == "feature/conflict" })
-        let conflictRun = await MRPipeline(mr: conflictMR, project: project, effects: LivePipelineEffects(git: clone, gitlab: gitlab, projectID: id))
-            .execute(RunRecorder(MRRun()) { _ in })
+        let conflictRun = await MRPipeline(
+            mr: conflictMR, project: project, effects: LivePipelineEffects(git: clone, gitlab: gitlab, projectID: id)
+        )
+        .execute(RunRecorder(MRRun()) { _ in })
         #expect(conflictRun.status == .conflict(files: ["README.md"]))
-        let conflictEffects = LiveFixEffects(clone: clone, worktree: root.appendingPathComponent("fixes/conflict"), gitlab: gitlab, projectID: id,
-                                             claudePath: claudePath, runner: runner)
-        let conflictFixer = FixPipeline(mr: conflictMR, project: project, effects: conflictEffects, rules: L("settings.rulesDefault"), config: config)
+        let conflictEffects = LiveFixEffects(
+            clone: clone, worktree: root.appendingPathComponent("fixes/conflict"), gitlab: gitlab, projectID: id,
+            claudePath: claudePath, runner: runner)
+        let conflictFixer = FixPipeline(
+            mr: conflictMR, project: project, effects: conflictEffects, rules: L("settings.rulesDefault"),
+            config: config)
         let resolved = await conflictFixer.fix(.conflict, RunRecorder(conflictRun) { _ in })
         let conflictFix = try #require(resolved.fix)
-        print("LIVE conflict fix:", conflictFix.phase, conflictFix.summary, conflictFix.files.map { ($0.path, $0.conflicts.map(\.source)) },
-              conflictFix[.claude].log.map(\.text))
+        print(
+            "LIVE conflict fix:", conflictFix.phase, conflictFix.summary,
+            conflictFix.files.map { ($0.path, $0.conflicts.map(\.source)) },
+            conflictFix[.claude].log.map(\.text))
         #expect(conflictFix.phase == .ready)
         #expect(conflictFix.files.first?.path == "README.md")
         #expect(conflictFix[.continueRebase].state == .done)

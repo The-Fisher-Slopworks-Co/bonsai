@@ -91,11 +91,14 @@ final class Workspace {
 
     func client() -> GitLabClient? {
         guard let account = store.account, let token = store.token else { return nil }
-        return GitLabClient(server: account.server, token: token, trustedFingerprint: account.trustedFingerprint, configuration: configuration())
+        return GitLabClient(
+            server: account.server, token: token, trustedFingerprint: account.trustedFingerprint,
+            configuration: configuration())
     }
 
     func git(for project: Project) -> GitRunner {
-        GitRunner(directory: store.cloneDirectory(for: project), auth: store.gitAuth, identity: store.settings.gitIdentity)
+        GitRunner(
+            directory: store.cloneDirectory(for: project), auth: store.gitAuth, identity: store.settings.gitIdentity)
     }
 
     func add(_ project: Project) {
@@ -188,7 +191,10 @@ final class Workspace {
             do {
                 try await client.retryPipeline(project: project.id, pipeline: pipelineID)
             } catch {
-                recorder.update { $0.status = .error(message: MRPipeline.describe(error)); $0[.ci].state = .failed }
+                recorder.update {
+                    $0.status = .error(message: MRPipeline.describe(error))
+                    $0[.ci].state = .failed
+                }
                 finish(mr, project, recorder)
                 return
             }
@@ -234,7 +240,8 @@ final class Workspace {
         let force = forced.removeValue(forKey: project.id) ?? []
         var queue: [MergeRequest] = []
         for mr in mrs where mrTasks[mr.id] == nil && !(runs[mr.id]?.fix?.isActive ?? false) {
-            let behind = (try? await git.behind("origin/\(mr.sourceBranch)", base: "origin/\(project.targetBranch)")) ?? 0
+            let behind =
+                (try? await git.behind("origin/\(mr.sourceBranch)", base: "origin/\(project.targetBranch)")) ?? 0
             behindCounts[mr.id] = behind
             guard force.contains(mr.id) || needsRun(runs[mr.id], mr: mr, base: base) else { continue }
             if runs[mr.id]?.fix != nil { await discardWorktree(mr, project) }
@@ -282,7 +289,8 @@ final class Workspace {
 
     private func makePipeline(_ mr: MergeRequest, _ project: Project, client: GitLabClient) -> MRPipeline {
         let git = git(for: project)
-        let effects = makeEffects?(project, git, client) ?? LivePipelineEffects(git: git, gitlab: client, projectID: project.id)
+        let effects =
+            makeEffects?(project, git, client) ?? LivePipelineEffects(git: git, gitlab: client, projectID: project.id)
         return MRPipeline(mr: mr, project: project, effects: effects, config: pipelineConfig)
     }
 
@@ -316,7 +324,9 @@ final class Workspace {
         let oldFix = runs[mr.id]?.fix?.phase
         runs[mr.id] = run
         if old != run.status || oldFix != run.fix?.phase {
-            onStatusChange?(StatusChange(mr: mr, project: project, old: old, new: run.status, oldFix: oldFix, newFix: run.fix?.phase))
+            onStatusChange?(
+                StatusChange(
+                    mr: mr, project: project, old: old, new: run.status, oldFix: oldFix, newFix: run.fix?.phase))
         }
     }
 
@@ -330,7 +340,8 @@ final class Workspace {
     }
 
     func canFix(_ mr: MergeRequest) -> Bool {
-        guard let project = project(for: mr), project.claude != .off, claude?.status == .ready, mrTasks[mr.id] == nil else { return false }
+        guard let project = project(for: mr), project.claude != .off, claude?.status == .ready, mrTasks[mr.id] == nil
+        else { return false }
         let run = run(mr)
         guard Self.fixKind(run.status) != nil else { return false }
         return !(run.fix?.isActive ?? false)
@@ -354,8 +365,9 @@ final class Workspace {
 
     private func fixPipeline(_ mr: MergeRequest, _ project: Project, client: GitLabClient) -> FixPipeline? {
         guard let path = claude?.path else { return nil }
-        let effects = LiveFixEffects(clone: git(for: project), worktree: worktree(for: mr, project: project), gitlab: client,
-                                     projectID: project.id, claudePath: path, runner: makeClaudeRunner())
+        let effects = LiveFixEffects(
+            clone: git(for: project), worktree: worktree(for: mr, project: project), gitlab: client,
+            projectID: project.id, claudePath: path, runner: makeClaudeRunner())
         var config = fixConfig
         config.attempts = store.settings.claude.attempts
         config.autoPush = store.settings.claude.push == .auto
@@ -368,7 +380,8 @@ final class Workspace {
 
     private func runFix(_ mr: MergeRequest, _ body: @escaping @MainActor (FixPipeline, RunRecorder) async -> Void) {
         guard let project = project(for: mr), let client = client(), mrTasks[mr.id] == nil,
-              let fixer = fixPipeline(mr, project, client: client) else { return }
+            let fixer = fixPipeline(mr, project, client: client)
+        else { return }
         let recorder = recorder(for: mr, project: project, start: run(mr))
         mrTasks[mr.id] = Task {
             await body(fixer, recorder)
@@ -379,7 +392,9 @@ final class Workspace {
     }
 
     func startFix(_ mr: MergeRequest) {
-        guard let kind = Self.fixKind(run(mr).status), let project = project(for: mr), project.claude != .off else { return }
+        guard let kind = Self.fixKind(run(mr).status), let project = project(for: mr), project.claude != .off else {
+            return
+        }
         runFix(mr) { fixer, recorder in _ = await fixer.fix(kind, recorder) }
     }
 
@@ -402,27 +417,33 @@ final class Workspace {
     }
 
     func canRevert(_ mr: MergeRequest) -> Bool {
-        guard let fix = run(mr).fix, fix.phase == .pushed, let pushed = fix.pushedSHA, let project = project(for: mr) else { return false }
+        guard let fix = run(mr).fix, fix.phase == .pushed, let pushed = fix.pushedSHA, let project = project(for: mr)
+        else { return false }
         let known = state(project).mergeRequests.first { $0.id == mr.id }?.sha ?? mr.sha
         return known == pushed || known == fix.baseSHA
     }
 
     func revertFix(_ mr: MergeRequest) {
         guard let fix = run(mr).fix else { return }
-        let failure: MRStatus = switch fix.kind {
-        case .tests: .testsFailed
-        case .ci: .ciFailed(job: fix.job ?? "pipeline")
-        case .conflict: .conflict(files: fix.files.map(\.path))
-        }
+        let failure: MRStatus =
+            switch fix.kind {
+            case .tests: .testsFailed
+            case .ci: .ciFailed(job: fix.job ?? "pipeline")
+            case .conflict: .conflict(files: fix.files.map(\.path))
+            }
         runFix(mr) { fixer, recorder in _ = await fixer.revert(recorder, failure: failure) }
     }
 
     func continueInTerminal(_ mr: MergeRequest) {
-        guard let project = project(for: mr), var current = runs[mr.id], let fix = current.fix, let session = fix.sessionID,
-              let claudePath = claude?.path, FileManager.default.fileExists(atPath: fix.worktree) else { return }
+        guard let project = project(for: mr), var current = runs[mr.id], let fix = current.fix,
+            let session = fix.sessionID,
+            let claudePath = claude?.path, FileManager.default.fileExists(atPath: fix.worktree)
+        else { return }
         mrTasks[mr.id]?.cancel()
-        let script = URL(fileURLWithPath: fix.worktree).deletingLastPathComponent().appendingPathComponent("\(mr.iid).command")
-        let text = "#!/bin/zsh -l\ncd \(ClaudeCLI.quote(fix.worktree)) || exit 1\nexec \(ClaudeCLI.quote(claudePath)) --resume \(ClaudeCLI.quote(session))\n"
+        let script = URL(fileURLWithPath: fix.worktree).deletingLastPathComponent().appendingPathComponent(
+            "\(mr.iid).command")
+        let text =
+            "#!/bin/zsh -l\ncd \(ClaudeCLI.quote(fix.worktree)) || exit 1\nexec \(ClaudeCLI.quote(claudePath)) --resume \(ClaudeCLI.quote(session))\n"
         do {
             try text.write(to: script, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
@@ -440,8 +461,10 @@ final class Workspace {
     }
 
     private func discardWorktree(_ mr: MergeRequest, _ project: Project) async {
-        let effects = LiveFixEffects(clone: git(for: project), worktree: worktree(for: mr, project: project),
-                                     gitlab: GitLabClient(server: URL(string: "http://localhost")!, token: ""), projectID: project.id, claudePath: "")
+        let effects = LiveFixEffects(
+            clone: git(for: project), worktree: worktree(for: mr, project: project),
+            gitlab: GitLabClient(server: URL(string: "http://localhost")!, token: ""), projectID: project.id,
+            claudePath: "")
         await effects.discard()
     }
 

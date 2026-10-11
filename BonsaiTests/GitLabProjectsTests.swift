@@ -1,11 +1,17 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 struct GitLabProjectsTests {
     @Test func searchSendsMembershipAndTerm() async throws {
         let server = MockURLProtocol.server { _ in
-            (200, json(#"[{"id": 5, "name": "app", "path_with_namespace": "g/app", "web_url": "https://x/g/app", "http_url_to_repo": "https://x/g/app.git", "default_branch": "main"}]"#))
+            (
+                200,
+                json(
+                    #"[{"id": 5, "name": "app", "path_with_namespace": "g/app", "web_url": "https://x/g/app", "http_url_to_repo": "https://x/g/app.git", "default_branch": "main"}]"#
+                )
+            )
         }
         let client = GitLabClient(server: server, token: "t", configuration: MockURLProtocol.configuration())
         let found = try await client.projects(search: " app ")

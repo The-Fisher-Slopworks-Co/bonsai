@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @MainActor
@@ -46,13 +47,20 @@ struct LiveConnectTests {
         await workspace.waitUntilIdle()
         let state = workspace.state(project)
         #expect(state.error == nil)
-        #expect(Set(state.mergeRequests.map(\.sourceBranch)) == ["feature/behind", "feature/conflict", "feature/failing-test"])
-        let statuses = Dictionary(uniqueKeysWithValues: state.mergeRequests.map { ($0.sourceBranch, workspace.run($0).status) })
+        #expect(
+            Set(state.mergeRequests.map(\.sourceBranch)) == [
+                "feature/behind", "feature/conflict", "feature/failing-test",
+            ])
+        let statuses = Dictionary(
+            uniqueKeysWithValues: state.mergeRequests.map { ($0.sourceBranch, workspace.run($0).status) })
         #expect(statuses["feature/behind"] == .upToDate(pushed: true))
         #expect(statuses["feature/conflict"] == .conflict(files: ["README.md"]))
         #expect(statuses["feature/failing-test"] == .testsFailed)
-        #expect(FileManager.default.fileExists(atPath: store.cloneDirectory(for: project).appendingPathComponent("Makefile").path))
-        let config = try String(contentsOf: store.cloneDirectory(for: project).appendingPathComponent(".git/config"), encoding: .utf8)
+        #expect(
+            FileManager.default.fileExists(
+                atPath: store.cloneDirectory(for: project).appendingPathComponent("Makefile").path))
+        let config = try String(
+            contentsOf: store.cloneDirectory(for: project).appendingPathComponent(".git/config"), encoding: .utf8)
         #expect(!config.contains(LiveGitLab.token!))
         await LiveGitLab.deleteProject(id)
     }

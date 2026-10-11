@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 final class FakeEffects: PipelineEffects, @unchecked Sendable {
@@ -46,7 +47,11 @@ final class FakeEffects: PipelineEffects, @unchecked Sendable {
             defer { pushIndex += 1 }
             return pushResults[min(pushIndex, pushResults.count - 1)]
         }
-        log(LogLine(text: result == .ok ? "+ \(branch) -> \(branch) (forced update)" : "! [rejected] \(branch) (stale info)", kind: .output))
+        log(
+            LogLine(
+                text: result == .ok
+                    ? "+ \(branch) -> \(branch) (forced update)" : "! [rejected] \(branch) (stale info)", kind: .output)
+        )
         return result
     }
     func pipeline(sha: String, branch: String) async throws -> CIPipeline? {
@@ -67,15 +72,22 @@ final class TickingClock: @unchecked Sendable {
     private let lock = NSLock()
     private var value = Date(timeIntervalSince1970: 0)
     var step: TimeInterval = 1
-    func now() -> Date { lock.withLock { value = value.addingTimeInterval(step); return value } }
+    func now() -> Date {
+        lock.withLock {
+            value = value.addingTimeInterval(step)
+            return value
+        }
+    }
 }
 
 struct PipelineTests {
-    static let mr = MergeRequest(projectID: 1, iid: 101, title: "Cache API responses", author: "me", sourceBranch: "feature/api-cache",
-                                 targetBranch: "main", webURL: URL(string: "https://x/mr/101")!, sha: "head1", draft: false, labels: [])
-    static let project = Project(id: 1, name: "project-main", path: "g/project-main", webURL: URL(string: "https://x/g")!,
-                                 cloneURL: URL(string: "https://x/g.git")!, defaultBranch: "main", targetBranch: "main",
-                                 setup: "./scripts/setup.sh", test: "make test")
+    static let mr = MergeRequest(
+        projectID: 1, iid: 101, title: "Cache API responses", author: "me", sourceBranch: "feature/api-cache",
+        targetBranch: "main", webURL: URL(string: "https://x/mr/101")!, sha: "head1", draft: false, labels: [])
+    static let project = Project(
+        id: 1, name: "project-main", path: "g/project-main", webURL: URL(string: "https://x/g")!,
+        cloneURL: URL(string: "https://x/g.git")!, defaultBranch: "main", targetBranch: "main",
+        setup: "./scripts/setup.sh", test: "make test")
 
     final class Statuses: @unchecked Sendable {
         private let lock = NSLock()
@@ -84,7 +96,9 @@ struct PipelineTests {
         var all: [MRStatus] { lock.withLock { list } }
     }
 
-    func execute(_ effects: FakeEffects, project: Project = PipelineTests.project, clock: TickingClock = TickingClock()) async -> (MRRun, [MRStatus]) {
+    func execute(_ effects: FakeEffects, project: Project = PipelineTests.project, clock: TickingClock = TickingClock())
+        async -> (MRRun, [MRStatus])
+    {
         let statuses = Statuses()
         let recorder = RunRecorder(MRRun()) { statuses.add($0.status) }
         let pipeline = MRPipeline(mr: Self.mr, project: project, effects: effects)
@@ -99,8 +113,11 @@ struct PipelineTests {
         let (run, statuses) = await execute(effects)
         #expect(run.status == .upToDate(pushed: true))
         #expect(states(run) == [.done, .done, .done, .done, .done])
-        #expect(statuses.filter { $0 != .unknown } == [.running(.rebase, attempt: 1), .running(.setup, attempt: 1), .running(.test, attempt: 1),
-                             .running(.push, attempt: 1), .running(.ci, attempt: 1), .upToDate(pushed: true)])
+        #expect(
+            statuses.filter { $0 != .unknown } == [
+                .running(.rebase, attempt: 1), .running(.setup, attempt: 1), .running(.test, attempt: 1),
+                .running(.push, attempt: 1), .running(.ci, attempt: 1), .upToDate(pushed: true),
+            ])
         #expect(effects.calls.contains("push feature/api-cache head1"))
         #expect(effects.calls.contains("pipeline rebased1"))
         #expect(run.pushedSHA == "rebased1")
@@ -215,7 +232,9 @@ struct PipelineTests {
         let effects = FakeEffects()
         effects.pushResults = [.failed("remote: GitLab: You are not allowed to force push code to a protected branch")]
         let (run, _) = await execute(effects)
-        #expect(run.status == .pushFailed(message: "remote: GitLab: You are not allowed to force push code to a protected branch"))
+        #expect(
+            run.status
+                == .pushFailed(message: "remote: GitLab: You are not allowed to force push code to a protected branch"))
         #expect(run[.ci].state == .pending)
     }
 

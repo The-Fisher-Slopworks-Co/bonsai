@@ -23,21 +23,25 @@ struct LiveClaudeRunner: ClaudeRunning {
     var startTimeout: Duration = .seconds(120)
 
     func arguments(_ request: ClaudeRequest) -> [String] {
-        var args = [request.executable, "-p", request.prompt,
-                    "--output-format", "stream-json", "--verbose",
-                    "--permission-mode", "dontAsk", "--permission-prompts", "none",
-                    "--allowedTools", request.allowedTools.joined(separator: ","),
-                    "--json-schema", request.schema]
+        var args = [
+            request.executable, "-p", request.prompt,
+            "--output-format", "stream-json", "--verbose",
+            "--permission-mode", "dontAsk", "--permission-prompts", "none",
+            "--allowedTools", request.allowedTools.joined(separator: ","),
+            "--json-schema", request.schema,
+        ]
         if let resume = request.resume { args += ["--resume", resume] }
         return args + extraArguments
     }
 
-    func run(_ request: ClaudeRequest, onEvent: @escaping @Sendable (ClaudeEvent) -> Void) async throws -> ClaudeResult {
+    func run(_ request: ClaudeRequest, onEvent: @escaping @Sendable (ClaudeEvent) -> Void) async throws -> ClaudeResult
+    {
         let parser = ClaudeStreamParser(cwd: request.directory.path)
         let box = ResultBox()
         let started = Signal()
         let process = Task {
-            try await ProcessRunner.run(shell, ["-lc", "\"$0\" \"$@\""] + arguments(request), in: request.directory) { line in
+            try await ProcessRunner.run(shell, ["-lc", "\"$0\" \"$@\""] + arguments(request), in: request.directory) {
+                line in
                 for event in parser.parse(line) {
                     if case .started = event { started.fire() }
                     if case .finished(let result) = event { box.set(result) }

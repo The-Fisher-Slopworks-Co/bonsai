@@ -1,12 +1,15 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 struct FixPromptTests {
     func prompt(_ kind: ClaudeFix.Kind) -> FixPrompt {
-        FixPrompt(kind: kind, branch: "feature/csv", base: "origin/main", setup: "npm ci", test: "make test",
-                  rules: "Только причина сбоя.", projectRules: "Не трогай migrations/", failureLog: (1...300).map { "line \($0)" }.joined(separator: "\n"),
-                  job: "lint", conflictFiles: ["package.json", "src/config.ts"], language: "Russian")
+        FixPrompt(
+            kind: kind, branch: "feature/csv", base: "origin/main", setup: "npm ci", test: "make test",
+            rules: "Только причина сбоя.", projectRules: "Не трогай migrations/",
+            failureLog: (1...300).map { "line \($0)" }.joined(separator: "\n"),
+            job: "lint", conflictFiles: ["package.json", "src/config.ts"], language: "Russian")
     }
 
     @Test func testsPromptCarriesRulesAndTailOfOutput() {

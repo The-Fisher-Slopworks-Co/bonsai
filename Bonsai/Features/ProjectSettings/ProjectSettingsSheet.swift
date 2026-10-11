@@ -26,7 +26,8 @@ struct ProjectSettingsSheet: View {
                     label(L("projects.branch"))
                     Picker(L("projects.branch"), selection: $model.draft.targetBranch) {
                         ForEach(model.branchNames, id: \.self) { name in
-                            Text(verbatim: model.isDefault(name) ? "\(name) — \(L("projects.defaultTag"))" : name).tag(name)
+                            Text(verbatim: model.isDefault(name) ? "\(name) — \(L("projects.defaultTag"))" : name).tag(
+                                name)
                         }
                     }
                     .labelsHidden()
@@ -63,9 +64,11 @@ struct ProjectSettingsSheet: View {
                 GridRow {
                     label(L("ps.notes"))
                     VStack(alignment: .leading, spacing: 4) {
-                        TextField("", text: $model.draft.rules, prompt: Text(verbatim: L("ps.notesPh")), axis: .vertical)
-                            .lineLimit(3...5)
-                            .textFieldStyle(.roundedBorder)
+                        TextField(
+                            "", text: $model.draft.rules, prompt: Text(verbatim: L("ps.notesPh")), axis: .vertical
+                        )
+                        .lineLimit(3...5)
+                        .textFieldStyle(.roundedBorder)
                         Text(verbatim: L("ps.notesHint")).font(.system(size: 11)).foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }

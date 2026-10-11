@@ -157,9 +157,11 @@ struct MRDetail: View {
                 Text(verbatim: mr.title)
                     .font(.system(size: 17, weight: .semibold))
                     .textSelection(.enabled)
-                Text("\("!\(mr.iid) · \(mr.author) · ")\(Text(verbatim: "\(mr.sourceBranch) → \(mr.targetBranch)").font(.system(size: 11, design: .monospaced)))")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                Text(
+                    "\("!\(mr.iid) · \(mr.author) · ")\(Text(verbatim: "\(mr.sourceBranch) → \(mr.targetBranch)").font(.system(size: 11, design: .monospaced)))"
+                )
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
             Link(destination: mr.webURL) {
@@ -174,7 +176,9 @@ struct MRDetail: View {
     private func visible(_ actions: [MRPresentation.Action]) -> [MRPresentation.Action] {
         actions.filter { action in
             switch action {
-            case .fix, .retryFix: workspace.canFix(mr) || (action == .retryFix && run.fix?.phase == .gaveUp && workspace.claude?.status == .ready)
+            case .fix, .retryFix:
+                workspace.canFix(mr)
+                    || (action == .retryFix && run.fix?.phase == .gaveUp && workspace.claude?.status == .ready)
             case .revert: workspace.canRevert(mr)
             case .terminal: run.fix?.sessionID != nil && workspace.claude?.status == .ready
             default: true
@@ -270,9 +274,12 @@ struct StageRow: View {
                         }
                     }
                     Spacer(minLength: 8)
-                    Text(verbatim: stage.state == .done || stage.state == .failed ? MRPresentation.duration(stage.duration) : "")
-                        .font(.system(size: 11).monospacedDigit())
-                        .foregroundStyle(.secondary)
+                    Text(
+                        verbatim: stage.state == .done || stage.state == .failed
+                            ? MRPresentation.duration(stage.duration) : ""
+                    )
+                    .font(.system(size: 11).monospacedDigit())
+                    .foregroundStyle(.secondary)
                     Image(systemName: "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.tertiary)

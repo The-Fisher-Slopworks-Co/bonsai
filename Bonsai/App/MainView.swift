@@ -33,12 +33,16 @@ struct MainView: View {
             }
         }
         .sheet(item: $editing) { project in
-            ProjectSettingsSheet(project: project, client: workspace.client(), claudeSettings: store.settings.claude) { saved in
+            ProjectSettingsSheet(project: project, client: workspace.client(), claudeSettings: store.settings.claude) {
+                saved in
                 workspace.update(saved)
                 if !saved.paused { workspace.check(saved) }
             }
         }
-        .alert(removing.map { L("ps.alertTitle", $0.name) } ?? "", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
+        .alert(
+            removing.map { L("ps.alertTitle", $0.name) } ?? "",
+            isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })
+        ) {
             Button(L("projects.cancel"), role: .cancel) { removing = nil }
             Button(L("ps.delete"), role: .destructive) {
                 guard let project = removing else { return }
@@ -136,10 +140,13 @@ struct MainView: View {
                 Button(L("projects.add")) { addingProject = true }
             }
         } else if let project = selected {
-            ProjectDetail(project: project, selection: Binding(
-                get: { mrSelection[project.id] },
-                set: { mrSelection[project.id] = $0 }
-            ))
+            ProjectDetail(
+                project: project,
+                selection: Binding(
+                    get: { mrSelection[project.id] },
+                    set: { mrSelection[project.id] = $0 }
+                )
+            )
             .id(project.id)
         }
     }

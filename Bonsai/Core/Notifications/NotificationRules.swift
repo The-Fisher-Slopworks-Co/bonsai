@@ -9,12 +9,15 @@ enum NotificationRules {
 
     static func note(for change: Workspace.StatusChange, settings: NotificationSettings) -> Note? {
         if change.newFix != change.oldFix, let phase = change.newFix {
-            let fixKey: String? = switch phase {
-            case .ready: settings.claudeReady ? "notify.claudeReady" : nil
-            case .gaveUp: settings.needsMe ? "notify.claudeFailed" : nil
-            case .pushed: change.old != change.new && change.new == .upToDate(pushed: true) && settings.updated ? "notify.ok" : nil
-            default: nil
-            }
+            let fixKey: String? =
+                switch phase {
+                case .ready: settings.claudeReady ? "notify.claudeReady" : nil
+                case .gaveUp: settings.needsMe ? "notify.claudeFailed" : nil
+                case .pushed:
+                    change.old != change.new && change.new == .upToDate(pushed: true) && settings.updated
+                        ? "notify.ok" : nil
+                default: nil
+                }
             if let fixKey { return Note(title: fixKey, mrID: change.mr.id, projectID: change.project.id) }
             return nil
         }

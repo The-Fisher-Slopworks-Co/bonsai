@@ -1,4 +1,5 @@
 import Foundation
+
 @testable import Bonsai
 
 struct TempRepo {
@@ -25,12 +26,15 @@ struct TempRepo {
     }
 
     func commit(_ message: String, in dir: URL? = nil) async throws {
-        try await sh("git add -A && git -c user.name=Seed -c user.email=seed@example.com commit -q -m '\(message)'", in: dir ?? seed)
+        try await sh(
+            "git add -A && git -c user.name=Seed -c user.email=seed@example.com commit -q -m '\(message)'",
+            in: dir ?? seed)
     }
 
     @discardableResult
     func sh(_ script: String, in dir: URL) async throws -> String {
-        let result = try await ProcessRunner.run("/bin/sh", ["-c", script], in: dir, environment: ["GIT_CONFIG_NOSYSTEM": "1"])
+        let result = try await ProcessRunner.run(
+            "/bin/sh", ["-c", script], in: dir, environment: ["GIT_CONFIG_NOSYSTEM": "1"])
         guard result.succeeded else { throw GitError(command: script, status: result.status, output: result.output) }
         return result.output.trimmingCharacters(in: .whitespacesAndNewlines)
     }

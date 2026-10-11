@@ -26,9 +26,13 @@ enum ConflictAnalysis {
                     common.append(line)
                 }
             case .main:
-                if line.hasPrefix("|||||||") { state = .base }
-                else if line.hasPrefix("=======") { state = .branch }
-                else { main.append(line) }
+                if line.hasPrefix("|||||||") {
+                    state = .base
+                } else if line.hasPrefix("=======") {
+                    state = .branch
+                } else {
+                    main.append(line)
+                }
             case .base:
                 if line.hasPrefix("=======") { state = .branch }
             case .branch:
@@ -48,7 +52,9 @@ enum ConflictAnalysis {
     }
 
     static func analyze(conflicted: String, resolved: String) -> [ResolvedConflict]? {
-        guard let segments = segments(conflicted), segments.contains(where: { if case .conflict = $0 { true } else { false } }) else { return nil }
+        guard let segments = segments(conflicted),
+            segments.contains(where: { if case .conflict = $0 { true } else { false } })
+        else { return nil }
         let out = lines(resolved)
         var position = 0
         var pending: (main: [String], branch: [String])?
@@ -83,7 +89,9 @@ enum ConflictAnalysis {
             lines.append(.init(number: index + 1, text: resolved[index], origin: .context))
         }
         var kept = Set<String>()
-        var usedMain = false, usedBranch = false, own = false
+        var usedMain = false
+        var usedBranch = false
+        var own = false
         for index in range {
             let text = resolved[index]
             let key = normalize(text)
@@ -115,9 +123,11 @@ enum ConflictAnalysis {
         for line in branch where !kept.contains(normalize(line)) && !normalize(line).isEmpty {
             dropped.append(.init(number: nil, text: line, origin: .branch))
         }
-        let source: ResolvedConflict.Source = own ? .own : (usedMain && usedBranch ? .both : usedMain ? .main : usedBranch ? .branch : .both)
-        return ResolvedConflict(startLine: range.lowerBound + 1, endLine: max(range.lowerBound + 1, range.upperBound),
-                                source: source, lines: lines, dropped: dropped)
+        let source: ResolvedConflict.Source =
+            own ? .own : (usedMain && usedBranch ? .both : usedMain ? .main : usedBranch ? .branch : .both)
+        return ResolvedConflict(
+            startLine: range.lowerBound + 1, endLine: max(range.lowerBound + 1, range.upperBound),
+            source: source, lines: lines, dropped: dropped)
     }
 
     static func normalize(_ line: String) -> String {
@@ -163,7 +173,10 @@ enum DiffParser {
                 flushFile()
                 let path = line.components(separatedBy: " b/").last ?? line
                 current = FixFile(path: path, kind: .diff)
-            } else if line.hasPrefix("+++ ") || line.hasPrefix("--- ") || line.hasPrefix("index ") || line.hasPrefix("new file") || line.hasPrefix("deleted file") || line.hasPrefix("similarity") || line.hasPrefix("rename ") {
+            } else if line.hasPrefix("+++ ") || line.hasPrefix("--- ") || line.hasPrefix("index ")
+                || line.hasPrefix("new file") || line.hasPrefix("deleted file") || line.hasPrefix("similarity")
+                || line.hasPrefix("rename ")
+            {
                 if line.hasPrefix("+++ b/") { current?.path = String(line.dropFirst(6)) }
             } else if line.hasPrefix("@@") {
                 flushHunk()

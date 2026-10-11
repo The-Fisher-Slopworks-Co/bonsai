@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @MainActor
@@ -101,7 +102,9 @@ struct ConnectModelTests {
 
     @Test func prefillsServerFromAccount() throws {
         let store = Store(directory: dir, keychain: keychain)
-        try store.signIn(Account(server: URL(string: "https://git.corp")!, username: "u", name: "U", trustedFingerprint: "AA"), token: "t")
+        try store.signIn(
+            Account(server: URL(string: "https://git.corp")!, username: "u", name: "U", trustedFingerprint: "AA"),
+            token: "t")
         defer { store.signOut() }
         let model = ConnectModel(store: store)
         #expect(model.server == "https://git.corp")

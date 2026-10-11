@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @Suite(.serialized)
@@ -13,13 +14,19 @@ final class TLSPinningTests {
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         let cert = dir.appendingPathComponent("cert.pem").path
         let key = dir.appendingPathComponent("key.pem").path
-        try run("/usr/bin/openssl", ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost",
-                                     "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1", "-keyout", key, "-out", cert])
+        try run(
+            "/usr/bin/openssl",
+            [
+                "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "1", "-subj", "/CN=localhost",
+                "-addext", "subjectAltName=DNS:localhost,IP:127.0.0.1", "-keyout", key, "-out", cert,
+            ])
         let der = dir.appendingPathComponent("cert.der").path
         try run("/usr/bin/openssl", ["x509", "-in", cert, "-outform", "DER", "-out", der])
         fingerprint = TrustDelegate.fingerprint(der: try Data(contentsOf: URL(fileURLWithPath: der)))
 
-        let script = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent("Support/tls_server.py").path
+        let script = URL(fileURLWithPath: #filePath).deletingLastPathComponent().appendingPathComponent(
+            "Support/tls_server.py"
+        ).path
         let portFile = dir.appendingPathComponent("port").path
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -27,8 +34,11 @@ final class TLSPinningTests {
         try process.run()
         server = process
         for _ in 0..<100 where port == 0 {
-            if let text = try? String(contentsOfFile: portFile, encoding: .utf8), let value = Int(text) { port = value }
-            else { Thread.sleep(forTimeInterval: 0.05) }
+            if let text = try? String(contentsOfFile: portFile, encoding: .utf8), let value = Int(text) {
+                port = value
+            } else {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
         }
     }
 

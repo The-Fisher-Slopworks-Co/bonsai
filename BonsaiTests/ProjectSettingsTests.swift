@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 @MainActor
@@ -48,7 +49,10 @@ struct ProjectSettingsModelTests {
 struct ProjectLifecycleTests {
     @Test func removeDeletesCloneAndForgetsProject() async throws {
         let f = try await WorkspaceTests().fixture()
-        defer { f.store.signOut(); f.repo.remove() }
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
         f.workspace.add(f.project)
         await f.workspace.waitUntilIdle()
         let clone = f.store.cloneDirectory(for: f.project)
@@ -65,7 +69,10 @@ struct ProjectLifecycleTests {
 
     @Test func pausedProjectIsSkippedByCheckAll() async throws {
         let f = try await WorkspaceTests().fixture()
-        defer { f.store.signOut(); f.repo.remove() }
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
         var paused = f.project
         paused.paused = true
         f.store.projects = [paused]

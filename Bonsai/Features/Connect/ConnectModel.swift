@@ -54,17 +54,21 @@ final class ConnectModel {
         let secret = token.trimmingCharacters(in: .whitespacesAndNewlines)
         let pinned = trust ? presentedFingerprint : nil
         var candidates = [url]
-        if !server.contains("://"), let plain = GitLabClient.normalize("http://" + server.trimmingCharacters(in: .whitespaces)) {
+        if !server.contains("://"),
+            let plain = GitLabClient.normalize("http://" + server.trimmingCharacters(in: .whitespaces))
+        {
             candidates.append(plain)
         }
         var outcome: Phase = .unreachable
         for candidate in candidates {
-            let client = GitLabClient(server: candidate, token: secret, trustedFingerprint: pinned, configuration: configuration())
+            let client = GitLabClient(
+                server: candidate, token: secret, trustedFingerprint: pinned, configuration: configuration())
             do {
                 let user = try await client.user()
                 let expires = try? await client.tokenExpiry()
-                let account = Account(server: candidate, username: user.username, name: user.name, avatarURL: user.avatarURL,
-                                      tokenExpiresAt: expires ?? nil, trustedFingerprint: pinned)
+                let account = Account(
+                    server: candidate, username: user.username, name: user.name, avatarURL: user.avatarURL,
+                    tokenExpiresAt: expires ?? nil, trustedFingerprint: pinned)
                 try store.signIn(account, token: secret)
                 store.fillGitIdentity(from: user)
                 store.saveTrustedCertificate(pinned == nil ? nil : client.acceptedCertificate)

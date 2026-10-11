@@ -1,34 +1,35 @@
 import Foundation
 import Testing
+
 @testable import Bonsai
 
 struct ConflictAnalysisTests {
     let conflicted = """
-    {
-      "name": "app",
-      "dependencies": {
-    <<<<<<< HEAD
-        "zod": "3.23.0"
-    =======
-        "zod": "3.22.0",
-        "date-fns": "3.0.0"
-    >>>>>>> 1a2b3c4 (Add date-fns)
-      }
-    }
-
-    """
-
-    @Test func bothSidesPicked() throws {
-        let resolved = """
         {
           "name": "app",
           "dependencies": {
-            "zod": "3.23.0",
+        <<<<<<< HEAD
+            "zod": "3.23.0"
+        =======
+            "zod": "3.22.0",
             "date-fns": "3.0.0"
+        >>>>>>> 1a2b3c4 (Add date-fns)
           }
         }
 
         """
+
+    @Test func bothSidesPicked() throws {
+        let resolved = """
+            {
+              "name": "app",
+              "dependencies": {
+                "zod": "3.23.0",
+                "date-fns": "3.0.0"
+              }
+            }
+
+            """
         let result = try #require(ConflictAnalysis.analyze(conflicted: conflicted, resolved: resolved))
         #expect(result.count == 1)
         let conflict = result[0]
@@ -43,15 +44,15 @@ struct ConflictAnalysisTests {
 
     @Test func ownCodeDetected() throws {
         let resolved = """
-        {
-          "name": "app",
-          "dependencies": {
-            "zod": "^3.23.0",
-            "date-fns": "3.0.0"
-          }
-        }
+            {
+              "name": "app",
+              "dependencies": {
+                "zod": "^3.23.0",
+                "date-fns": "3.0.0"
+              }
+            }
 
-        """
+            """
         let result = try #require(ConflictAnalysis.analyze(conflicted: conflicted, resolved: resolved))
         #expect(result[0].source == .own)
         #expect(result[0].lines.contains { $0.origin == .own && $0.text.contains("^3.23.0") })
@@ -65,7 +66,8 @@ struct ConflictAnalysisTests {
     }
 
     @Test func multipleConflictsAndDiff3() throws {
-        let text = "a\n<<<<<<< HEAD\nm1\n||||||| base\nb1\n=======\nx1\n>>>>>>> c\nmid\n<<<<<<< HEAD\nm2\n=======\nx2\n>>>>>>> c\nend\n"
+        let text =
+            "a\n<<<<<<< HEAD\nm1\n||||||| base\nb1\n=======\nx1\n>>>>>>> c\nmid\n<<<<<<< HEAD\nm2\n=======\nx2\n>>>>>>> c\nend\n"
         let resolved = "a\nm1\nmid\nx2\nend\n"
         let result = try #require(ConflictAnalysis.analyze(conflicted: text, resolved: resolved))
         #expect(result.map(\.source) == [.main, .branch])
@@ -81,22 +83,22 @@ struct ConflictAnalysisTests {
 struct DiffParserTests {
     @Test func parsesFilesHunksAndCounts() {
         let diff = """
-        diff --git a/src/export/csv.ts b/src/export/csv.ts
-        index 1..2 100644
-        --- a/src/export/csv.ts
-        +++ b/src/export/csv.ts
-        @@ -10,3 +10,3 @@ export function toCsv(rows, options) {
-           const header = columns.join(sep)
-        -  const sep = ","
-        +  const sep = options.delimiter ?? ";"
-           return lines
-        diff --git a/test/csv_test.ts b/test/csv_test.ts
-        new file mode 100644
-        --- /dev/null
-        +++ b/test/csv_test.ts
-        @@ -0,0 +1 @@
-        +it("works")
-        """
+            diff --git a/src/export/csv.ts b/src/export/csv.ts
+            index 1..2 100644
+            --- a/src/export/csv.ts
+            +++ b/src/export/csv.ts
+            @@ -10,3 +10,3 @@ export function toCsv(rows, options) {
+               const header = columns.join(sep)
+            -  const sep = ","
+            +  const sep = options.delimiter ?? ";"
+               return lines
+            diff --git a/test/csv_test.ts b/test/csv_test.ts
+            new file mode 100644
+            --- /dev/null
+            +++ b/test/csv_test.ts
+            @@ -0,0 +1 @@
+            +it("works")
+            """
         let files = DiffParser.parse(diff)
         #expect(files.map(\.path) == ["src/export/csv.ts", "test/csv_test.ts"])
         #expect(files[0].added == 1)
@@ -106,8 +108,10 @@ struct DiffParserTests {
         #expect(files[1].added == 1)
     }
 
-    @Test(arguments: [("test/export/csv_test.ts", true), ("src/a.spec.ts", true), ("pkg/x_test.go", true), ("__tests__/a.js", true),
-                      ("BonsaiTests/StoreTests.swift", true), ("src/export/csv.ts", false), ("README.md", false)])
+    @Test(arguments: [
+        ("test/export/csv_test.ts", true), ("src/a.spec.ts", true), ("pkg/x_test.go", true), ("__tests__/a.js", true),
+        ("BonsaiTests/StoreTests.swift", true), ("src/export/csv.ts", false), ("README.md", false),
+    ])
     func testPaths(path: String, expected: Bool) {
         #expect(DiffParser.isTestPath(path) == expected)
     }

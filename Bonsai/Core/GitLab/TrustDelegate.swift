@@ -19,9 +19,11 @@ final class TrustDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
     var acceptedCertificate: Data? { lock.withLock { accepted } }
 
     func urlSession(_ session: URLSession, didReceive challenge: URLAuthenticationChallenge) async
-        -> (URLSession.AuthChallengeDisposition, URLCredential?) {
+        -> (URLSession.AuthChallengeDisposition, URLCredential?)
+    {
         guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
-              let trust = challenge.protectionSpace.serverTrust else {
+            let trust = challenge.protectionSpace.serverTrust
+        else {
             return (.performDefaultHandling, nil)
         }
         if SecTrustEvaluateWithError(trust, nil) {
@@ -29,8 +31,12 @@ final class TrustDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
         }
         let fingerprint = Self.fingerprint(of: trust)
         lock.withLock { failed = fingerprint }
-        if Self.accepts(challengeHost: challenge.protectionSpace.host, host: host, pinned: pinned, presented: fingerprint) {
-            let leaf = (SecTrustCopyCertificateChain(trust) as? [SecCertificate])?.first.map { SecCertificateCopyData($0) as Data }
+        if Self.accepts(
+            challengeHost: challenge.protectionSpace.host, host: host, pinned: pinned, presented: fingerprint)
+        {
+            let leaf = (SecTrustCopyCertificateChain(trust) as? [SecCertificate])?.first.map {
+                SecCertificateCopyData($0) as Data
+            }
             lock.withLock { accepted = leaf }
             return (.useCredential, URLCredential(trust: trust))
         }
@@ -43,7 +49,9 @@ final class TrustDelegate: NSObject, URLSessionDelegate, @unchecked Sendable {
     }
 
     static func fingerprint(of trust: SecTrust) -> String? {
-        guard let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], let leaf = chain.first else { return nil }
+        guard let chain = SecTrustCopyCertificateChain(trust) as? [SecCertificate], let leaf = chain.first else {
+            return nil
+        }
         return fingerprint(der: SecCertificateCopyData(leaf) as Data)
     }
 

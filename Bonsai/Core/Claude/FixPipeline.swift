@@ -20,9 +20,10 @@ struct FixPipeline: Sendable {
     func fix(_ kind: ClaudeFix.Kind, _ recorder: RunRecorder, now: @Sendable () -> Date = Date.init) async -> MRRun {
         let failed = recorder.run
         recorder.update { run in
-            var fix = ClaudeFix(kind: kind, phase: .fixing, maxAttempts: config.attempts,
-                                stages: ClaudeFix.stageKinds(for: kind).map { Stage(kind: $0) },
-                                worktree: effects.worktree.path, baseSHA: mr.sha, startedAt: now())
+            var fix = ClaudeFix(
+                kind: kind, phase: .fixing, maxAttempts: config.attempts,
+                stages: ClaudeFix.stageKinds(for: kind).map { Stage(kind: $0) },
+                worktree: effects.worktree.path, baseSHA: mr.sha, startedAt: now())
             if case .ciFailed(let job) = failed.status { fix.job = job }
             fix[.retest].caption = .afterFix
             fix[.retest].detail = firstLine(project.test)
@@ -51,10 +52,15 @@ struct FixPipeline: Sendable {
         }
     }
 
-    private func attempt(_ kind: ClaudeFix.Kind, failed: MRRun, _ recorder: RunRecorder, now: @Sendable () -> Date) async throws -> MRRun {
+    private func attempt(_ kind: ClaudeFix.Kind, failed: MRRun, _ recorder: RunRecorder, now: @Sendable () -> Date)
+        async throws -> MRRun
+    {
         let claudeLog = recorder.fixLog(.claude)
         start(.claude, recorder, now: now)
-        recorder.update { $0.fix?[.claude].caption = .claudeAttempt; $0.fix?[.claude].detail = "1/\(config.attempts)" }
+        recorder.update {
+            $0.fix?[.claude].caption = .claudeAttempt
+            $0.fix?[.claude].detail = "1/\(config.attempts)"
+        }
 
         try await effects.prepare(branch: mr.sourceBranch, log: { _ in })
         var conflictFiles: [String] = []
@@ -77,12 +83,14 @@ struct FixPipeline: Sendable {
             }
         }
 
-        var prompt = FixPrompt(kind: kind, branch: mr.sourceBranch, base: "origin/\(project.targetBranch)", setup: project.setup,
-                               test: project.test, rules: rules, projectRules: project.rules, conflictFiles: conflictFiles,
-                               language: config.language)
+        var prompt = FixPrompt(
+            kind: kind, branch: mr.sourceBranch, base: "origin/\(project.targetBranch)", setup: project.setup,
+            test: project.test, rules: rules, projectRules: project.rules, conflictFiles: conflictFiles,
+            language: config.language)
         switch kind {
         case .tests:
-            prompt.failureLog = (failed[.setup].state == .failed ? failed[.setup] : failed[.test]).log.map(\.text).joined(separator: "\n")
+            prompt.failureLog = (failed[.setup].state == .failed ? failed[.setup] : failed[.test]).log.map(\.text)
+                .joined(separator: "\n")
         case .ci:
             prompt.job = recorder.run.fix?.job
             if let job = failed.failedJobID { prompt.failureLog = (try? await effects.jobLog(job)) ?? "" }
@@ -164,7 +172,8 @@ struct FixPipeline: Sendable {
                 claude.detail = String(run.fix!.resolvedConflicts)
             } else {
                 claude.caption = .claudeChanged
-                claude.detail = "\(files.count)/\(files.reduce(0) { $0 + $1.added })/\(files.reduce(0) { $0 + $1.removed })"
+                claude.detail =
+                    "\(files.count)/\(files.reduce(0) { $0 + $1.added })/\(files.reduce(0) { $0 + $1.removed })"
             }
             run.fix![.claude] = claude
             run.fix!.phase = .ready
@@ -176,7 +185,9 @@ struct FixPipeline: Sendable {
         return recorder.run
     }
 
-    private func runClaude(_ prompt: String, tools: [String], resume: String?, _ recorder: RunRecorder) async throws -> ClaudeResult {
+    private func runClaude(_ prompt: String, tools: [String], resume: String?, _ recorder: RunRecorder) async throws
+        -> ClaudeResult
+    {
         let log = recorder.fixLog(.claude)
         let result = try await effects.claude(prompt: prompt, tools: tools, resume: resume) { event in
             switch event {
@@ -224,16 +235,21 @@ struct FixPipeline: Sendable {
         return ok
     }
 
-    private func describe(_ kind: ClaudeFix.Kind, conflicted: [String: String], _ recorder: RunRecorder) async throws -> [FixFile] {
+    private func describe(_ kind: ClaudeFix.Kind, conflicted: [String: String], _ recorder: RunRecorder) async throws
+        -> [FixFile]
+    {
         var files: [FixFile]
         if kind == .conflict {
             files = conflicted.keys.sorted().map { path in
                 let before = conflicted[path] ?? ""
                 let after = effects.read(path) ?? ""
-                let count = ConflictAnalysis.segments(before)?.filter { if case .conflict = $0 { true } else { false } }.count ?? 1
+                let count =
+                    ConflictAnalysis.segments(before)?.filter { if case .conflict = $0 { true } else { false } }.count
+                    ?? 1
                 if FixPrompt.isLockFile(path) {
                     let placeholder = ResolvedConflict(startLine: 1, endLine: 1, source: .both, lines: [], dropped: [])
-                    return FixFile(path: path, kind: .lock, conflicts: Array(repeating: placeholder, count: max(1, count)))
+                    return FixFile(
+                        path: path, kind: .lock, conflicts: Array(repeating: placeholder, count: max(1, count)))
                 }
                 let resolved = ConflictAnalysis.analyze(conflicted: before, resolved: after) ?? []
                 return FixFile(path: path, kind: .conflict, conflicts: resolved)
@@ -249,7 +265,7 @@ struct FixPipeline: Sendable {
 
     private func giveUp(_ recorder: RunRecorder, error: Error?, now: @Sendable () -> Date) async -> MRRun {
         if let error {
-            recorder.fixLog(.claude)(LogLine(text: MRPipeline.describe(error) , kind: .error))
+            recorder.fixLog(.claude)(LogLine(text: MRPipeline.describe(error), kind: .error))
         }
         recorder.update { run in
             guard run.fix != nil else { return }
@@ -270,7 +286,10 @@ struct FixPipeline: Sendable {
 
     func push(message: String, _ recorder: RunRecorder, now: @Sendable () -> Date = Date.init) async -> MRRun {
         guard let fix = recorder.run.fix else { return recorder.run }
-        recorder.update { $0.fix?.phase = .pushing; $0.fix?.commitMessage = message }
+        recorder.update {
+            $0.fix?.phase = .pushing
+            $0.fix?.commitMessage = message
+        }
         start(.push, recorder, now: now)
         let log = recorder.fixLog(.push)
         do {
@@ -436,7 +455,9 @@ struct FixPipeline: Sendable {
 
     private func markLastOutput(_ recorder: RunRecorder, kind: StageKind = .retest) {
         recorder.update { run in
-            guard let index = run.fix?[kind].log.lastIndex(where: { $0.kind == .output }), index == (run.fix?[kind].log.count ?? 0) - 1 else { return }
+            guard let index = run.fix?[kind].log.lastIndex(where: { $0.kind == .output }),
+                index == (run.fix?[kind].log.count ?? 0) - 1
+            else { return }
             run.fix?[kind].log[index].kind = .ok
         }
     }

@@ -20,7 +20,8 @@ enum ProcessRunner {
         environment: [String: String] = [:],
         onLine: (@Sendable (String) -> Void)? = nil
     ) async throws -> CommandResult {
-        let process = try Spawned(executable: executable, arguments: arguments, directory: directory, environment: environment)
+        let process = try Spawned(
+            executable: executable, arguments: arguments, directory: directory, environment: environment)
         return try await withTaskCancellationHandler {
             let output = await process.readAll(onLine: onLine)
             let status = await process.wait()
@@ -33,7 +34,8 @@ enum ProcessRunner {
 
     static func environment(_ overrides: [String: String]) -> [String: String] {
         var env = ProcessInfo.processInfo.environment
-        for key in env.keys where key.hasPrefix("XCTest") || key.hasPrefix("DYLD_") || key == "__XPC_DYLD_LIBRARY_PATH" {
+        for key in env.keys where key.hasPrefix("XCTest") || key.hasPrefix("DYLD_") || key == "__XPC_DYLD_LIBRARY_PATH"
+        {
             env[key] = nil
         }
         env.merge(overrides) { _, new in new }
@@ -77,7 +79,9 @@ private final class Spawned: @unchecked Sendable {
         var noMask = sigset_t()
         sigemptyset(&noMask)
         posix_spawnattr_setsigmask(&attributes, &noMask)
-        posix_spawnattr_setflags(&attributes, Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_CLOEXEC_DEFAULT))
+        posix_spawnattr_setflags(
+            &attributes,
+            Int16(POSIX_SPAWN_SETPGROUP | POSIX_SPAWN_SETSIGDEF | POSIX_SPAWN_SETSIGMASK | POSIX_SPAWN_CLOEXEC_DEFAULT))
 
         let env = ProcessRunner.environment(environment)
         let argv = ([executable] + arguments).map { strdup($0) } + [nil]

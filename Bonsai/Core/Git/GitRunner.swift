@@ -56,7 +56,9 @@ struct GitRunner: Sendable {
     }
 
     @discardableResult
-    func run(_ args: [String], in dir: URL? = nil, onLine: (@Sendable (String) -> Void)? = nil) async throws -> CommandResult {
+    func run(_ args: [String], in dir: URL? = nil, onLine: (@Sendable (String) -> Void)? = nil) async throws
+        -> CommandResult
+    {
         try await ProcessRunner.run(git, args, in: dir ?? directory, environment: environment, onLine: onLine)
     }
 
@@ -76,7 +78,8 @@ struct GitRunner: Sendable {
     func clone(_ url: URL, onLine: (@Sendable (String) -> Void)? = nil) async throws {
         let parent = directory.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
-        let result = try await run(["clone", "--no-tags", url.absoluteString, directory.lastPathComponent], in: parent, onLine: onLine)
+        let result = try await run(
+            ["clone", "--no-tags", url.absoluteString, directory.lastPathComponent], in: parent, onLine: onLine)
         guard result.succeeded else {
             try? FileManager.default.removeItem(at: directory)
             throw GitError(command: "git clone", status: result.status, output: result.output)

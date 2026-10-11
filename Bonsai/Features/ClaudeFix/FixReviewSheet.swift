@@ -92,7 +92,10 @@ struct FixReviewSheet: View {
                 }
                 if !rest.isEmpty {
                     let collapsible = rest.count > 5
-                    Section(isExpanded: Binding(get: { !collapsible || restOpen || rest.contains(selection) }, set: { restOpen = $0 })) {
+                    Section(
+                        isExpanded: Binding(
+                            get: { !collapsible || restOpen || rest.contains(selection) }, set: { restOpen = $0 })
+                    ) {
                         ForEach(rest, id: \.self) { navRow($0) }
                     } header: {
                         Text(verbatim: L("fix.grpRest"))
@@ -199,7 +202,8 @@ private struct FileChanges: View {
                     ForEach(FixReview.legend(file), id: \.self) { origin in
                         HStack(spacing: 4) {
                             RoundedRectangle(cornerRadius: 1).fill(FixReview.color(origin)).frame(width: 3, height: 10)
-                            Text(verbatim: FixReview.originTitle(origin)).font(.system(size: 11)).foregroundStyle(.secondary)
+                            Text(verbatim: FixReview.originTitle(origin)).font(.system(size: 11)).foregroundStyle(
+                                .secondary)
                         }
                     }
                 }
@@ -220,7 +224,12 @@ private struct FileChanges: View {
                             Text(verbatim: L("fix.dropped"))
                                 .font(.system(size: 11, weight: .semibold))
                                 .foregroundStyle(.secondary)
-                            DiffBlock(rows: conflict.dropped.map { FixReview.Row(number: "", text: $0.text, bar: FixReview.color($0.origin), tint: .clear, dim: true) })
+                            DiffBlock(
+                                rows: conflict.dropped.map {
+                                    FixReview.Row(
+                                        number: "", text: $0.text, bar: FixReview.color($0.origin), tint: .clear,
+                                        dim: true)
+                                })
                         }
                     }
                 case .lock:
@@ -290,7 +299,10 @@ enum FixReview {
         let verified = L("fix.verified") + (fix.phase == .pushed ? " · " + L("fix.pushedBadge") : "")
         var badges = [Badge(text: verified, warning: false)]
         if fix.kind != .conflict {
-            badges.append(fix.testsTouched ? Badge(text: L("fix.testsTouched"), warning: true) : Badge(text: L("fix.testsUntouched"), warning: false))
+            badges.append(
+                fix.testsTouched
+                    ? Badge(text: L("fix.testsTouched"), warning: true)
+                    : Badge(text: L("fix.testsUntouched"), warning: false))
         }
         return badges
     }
@@ -311,8 +323,11 @@ enum FixReview {
             return L("fix.conflictsN", file.conflicts.count) + " · " + L("fix.kind.lock")
         case .conflict:
             guard let first = file.conflicts.first else { return L("fix.kind.own") }
-            let place = file.conflicts.count > 1 ? L("fix.conflictsN", file.conflicts.count)
-                : first.startLine == first.endLine ? L("fix.line", first.startLine) : L("fix.lines", first.startLine, first.endLine)
+            let place =
+                file.conflicts.count > 1
+                ? L("fix.conflictsN", file.conflicts.count)
+                : first.startLine == first.endLine
+                    ? L("fix.line", first.startLine) : L("fix.lines", first.startLine, first.endLine)
             return place + " · " + kindTitle(file)
         }
     }
@@ -362,8 +377,10 @@ enum FixReview {
         var rows = [Row(number: "", text: hunk.header, bar: .clear, tint: .clear, dim: true)]
         for line in hunk.lines {
             switch line.kind {
-            case .added: rows.append(Row(number: "+", text: line.text, bar: .green, tint: .green.opacity(0.14), dim: false))
-            case .removed: rows.append(Row(number: "−", text: line.text, bar: .red, tint: .red.opacity(0.11), dim: false))
+            case .added:
+                rows.append(Row(number: "+", text: line.text, bar: .green, tint: .green.opacity(0.14), dim: false))
+            case .removed:
+                rows.append(Row(number: "−", text: line.text, bar: .red, tint: .red.opacity(0.11), dim: false))
             case .context: rows.append(Row(number: "", text: line.text, bar: .clear, tint: .clear, dim: true))
             }
         }
@@ -372,7 +389,8 @@ enum FixReview {
 
     static func rows(_ conflict: ResolvedConflict) -> [Row] {
         conflict.lines.map { line in
-            Row(number: line.number.map(String.init) ?? "", text: line.text, bar: color(line.origin),
+            Row(
+                number: line.number.map(String.init) ?? "", text: line.text, bar: color(line.origin),
                 tint: line.origin == .context ? .clear : color(line.origin).opacity(0.1), dim: line.origin == .context)
         }
     }

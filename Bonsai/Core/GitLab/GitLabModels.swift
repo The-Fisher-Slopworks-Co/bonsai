@@ -62,8 +62,10 @@ struct GitLabMergeRequest: Codable, Equatable, Sendable {
     }
 
     var model: MergeRequest {
-        MergeRequest(projectID: projectID, iid: iid, title: title, author: author.username, sourceBranch: sourceBranch,
-                     targetBranch: targetBranch, webURL: webURL, sha: sha, draft: draft ?? workInProgress ?? false, labels: labels)
+        MergeRequest(
+            projectID: projectID, iid: iid, title: title, author: author.username, sourceBranch: sourceBranch,
+            targetBranch: targetBranch, webURL: webURL, sha: sha, draft: draft ?? workInProgress ?? false,
+            labels: labels)
     }
 }
 

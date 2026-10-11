@@ -103,8 +103,10 @@ struct MRPipeline: Sendable {
     private var source: String { mr.sourceBranch }
     private var target: String { project.targetBranch }
 
-    func execute(_ recorder: RunRecorder, now: @Sendable () -> Date = Date.init,
-                 onLocalDone: @escaping @Sendable () -> Void = {}) async -> MRRun {
+    func execute(
+        _ recorder: RunRecorder, now: @Sendable () -> Date = Date.init,
+        onLocalDone: @escaping @Sendable () -> Void = {}
+    ) async -> MRRun {
         let release = Once(onLocalDone)
         defer { release() }
         var attempt = 1
@@ -127,7 +129,9 @@ struct MRPipeline: Sendable {
 
     private enum Outcome { case finished, restart }
 
-    func watchCIOnly(_ recorder: RunRecorder, sha: String, pushed: Bool, now: @Sendable () -> Date = Date.init) async -> MRRun {
+    func watchCIOnly(_ recorder: RunRecorder, sha: String, pushed: Bool, now: @Sendable () -> Date = Date.init) async
+        -> MRRun
+    {
         do {
             _ = try await watchCI(sha: sha, pushed: pushed, recorder, attempt: recorder.run.attempt, now: now)
         } catch is CancellationError {
@@ -137,7 +141,9 @@ struct MRPipeline: Sendable {
         return recorder.run
     }
 
-    private func attemptOnce(_ attempt: Int, _ recorder: RunRecorder, now: @Sendable () -> Date, release: Once) async throws -> Outcome {
+    private func attemptOnce(_ attempt: Int, _ recorder: RunRecorder, now: @Sendable () -> Date, release: Once)
+        async throws -> Outcome
+    {
         recorder.update { run in
             run.attempt = attempt
             run.resetStages()
@@ -155,7 +161,10 @@ struct MRPipeline: Sendable {
         try await effects.fetch(log: rebaseLog)
         let head = try await effects.sha("origin/\(source)")
         let base = try await effects.sha("origin/\(target)")
-        recorder.update { $0.headSHA = head; $0.baseSHA = base }
+        recorder.update {
+            $0.headSHA = head
+            $0.baseSHA = base
+        }
         let behind = try await effects.behind(head: "origin/\(source)", base: "origin/\(target)")
 
         if behind == 0 {
@@ -163,7 +172,10 @@ struct MRPipeline: Sendable {
             rebaseLog(LogLine(text: Note.notNeeded.rawValue, kind: .note))
             finish(.rebase, .skipped, recorder, now: now) { $0.caption = .notNeeded }
             for kind in [StageKind.setup, .test, .push] {
-                recorder.update { $0[kind].state = .skipped; $0[kind].caption = .none }
+                recorder.update {
+                    $0[kind].state = .skipped
+                    $0[kind].caption = .none
+                }
             }
             release()
             return try await watchCI(sha: head, pushed: false, recorder, attempt: attempt, now: now)
@@ -176,8 +188,14 @@ struct MRPipeline: Sendable {
             rebaseLog(LogLine(text: "$ git rebase --abort", kind: .command))
             await effects.abortRebase(log: rebaseLog)
             rebaseLog(LogLine(text: Note.abort.rawValue, kind: .note))
-            finish(.rebase, .failed, recorder, now: now) { $0.caption = .conflictFiles; $0.detail = String(files.count) }
-            recorder.update { $0.status = .conflict(files: files); $0.finishedAt = now() }
+            finish(.rebase, .failed, recorder, now: now) {
+                $0.caption = .conflictFiles
+                $0.detail = String(files.count)
+            }
+            recorder.update {
+                $0.status = .conflict(files: files)
+                $0.finishedAt = now()
+            }
             return .finished
         case .ok:
             finish(.rebase, .done, recorder, now: now)
@@ -186,10 +204,16 @@ struct MRPipeline: Sendable {
         for (kind, command) in [(StageKind.setup, project.setup), (.test, project.test)] {
             let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
             if trimmed.isEmpty {
-                recorder.update { $0[kind].state = .skipped; $0[kind].caption = .none }
+                recorder.update {
+                    $0[kind].state = .skipped
+                    $0[kind].caption = .none
+                }
                 continue
             }
-            recorder.update { $0[kind].caption = .command; $0[kind].detail = firstLine(trimmed) }
+            recorder.update {
+                $0[kind].caption = .command
+                $0[kind].detail = firstLine(trimmed)
+            }
             start(kind, recorder, attempt: attempt, now: now)
             let log = recorder.log(kind)
             for line in trimmed.split(separator: "\n") { log(LogLine(text: "$ \(line)", kind: .command)) }
@@ -197,14 +221,20 @@ struct MRPipeline: Sendable {
                 markLastLine(kind, recorder, as: .error)
                 log(LogLine(text: Note.notPushed.rawValue, kind: .note))
                 finish(kind, .failed, recorder, now: now)
-                recorder.update { $0.status = .testsFailed; $0.finishedAt = now() }
+                recorder.update {
+                    $0.status = .testsFailed
+                    $0.finishedAt = now()
+                }
                 return .finished
             }
             markLastLine(kind, recorder, as: .ok)
             finish(kind, .done, recorder, now: now)
         }
 
-        recorder.update { $0[.push].caption = .command; $0[.push].detail = "git push --force-with-lease" }
+        recorder.update {
+            $0[.push].caption = .command
+            $0[.push].detail = "git push --force-with-lease"
+        }
         start(.push, recorder, attempt: attempt, now: now)
         let pushLog = recorder.log(.push)
         pushLog(LogLine(text: "$ git push --force-with-lease origin \(source)", kind: .command))
@@ -228,7 +258,10 @@ struct MRPipeline: Sendable {
         case .failed(let message):
             markLastLine(.push, recorder, as: .error)
             finish(.push, .failed, recorder, now: now)
-            recorder.update { $0.status = .pushFailed(message: message); $0.finishedAt = now() }
+            recorder.update {
+                $0.status = .pushFailed(message: message)
+                $0.finishedAt = now()
+            }
             return .finished
         }
 
@@ -236,7 +269,9 @@ struct MRPipeline: Sendable {
         return try await watchCI(sha: pushed, pushed: true, recorder, attempt: attempt, now: now)
     }
 
-    private func watchCI(sha: String, pushed: Bool, _ recorder: RunRecorder, attempt: Int, now: @Sendable () -> Date) async throws -> Outcome {
+    private func watchCI(sha: String, pushed: Bool, _ recorder: RunRecorder, attempt: Int, now: @Sendable () -> Date)
+        async throws -> Outcome
+    {
         recorder.update { $0[.ci].caption = .pipeline }
         start(.ci, recorder, attempt: attempt, now: now)
         let log = recorder.log(.ci)
@@ -257,24 +292,40 @@ struct MRPipeline: Sendable {
                 case .passed:
                     log(LogLine(text: Note.ciPassed.rawValue, kind: .note))
                     finish(.ci, .done, recorder, now: now) { $0.caption = .ciPassed }
-                    recorder.update { $0.status = .upToDate(pushed: pushed); $0.finishedAt = now() }
+                    recorder.update {
+                        $0.status = .upToDate(pushed: pushed)
+                        $0.finishedAt = now()
+                    }
                     return .finished
                 case .failed:
                     let job = try await effects.failedJob(pipeline: pipeline.id)
                     let name = job?.name ?? "pipeline"
                     log(LogLine(text: "\(name): failed", kind: .error))
-                    finish(.ci, .failed, recorder, now: now) { $0.caption = .ciFailed; $0.detail = name }
-                    recorder.update { $0.status = .ciFailed(job: name); $0.failedJobID = job?.id; $0.finishedAt = now() }
+                    finish(.ci, .failed, recorder, now: now) {
+                        $0.caption = .ciFailed
+                        $0.detail = name
+                    }
+                    recorder.update {
+                        $0.status = .ciFailed(job: name)
+                        $0.failedJobID = job?.id
+                        $0.finishedAt = now()
+                    }
                     return .finished
                 }
             } else if waited >= config.ciAppearTimeout {
                 finish(.ci, .skipped, recorder, now: now)
-                recorder.update { $0.status = .upToDate(pushed: pushed); $0.finishedAt = now() }
+                recorder.update {
+                    $0.status = .upToDate(pushed: pushed)
+                    $0.finishedAt = now()
+                }
                 return .finished
             }
             if waited >= config.ciTimeout {
                 finish(.ci, .skipped, recorder, now: now)
-                recorder.update { $0.status = .upToDate(pushed: pushed); $0.finishedAt = now() }
+                recorder.update {
+                    $0.status = .upToDate(pushed: pushed)
+                    $0.finishedAt = now()
+                }
                 return .finished
             }
             try await effects.sleep(config.ciPollInterval)
@@ -289,8 +340,10 @@ struct MRPipeline: Sendable {
         }
     }
 
-    private func finish(_ kind: StageKind, _ state: StageState, _ recorder: RunRecorder, now: () -> Date,
-                        _ change: (inout Stage) -> Void = { _ in }) {
+    private func finish(
+        _ kind: StageKind, _ state: StageState, _ recorder: RunRecorder, now: () -> Date,
+        _ change: (inout Stage) -> Void = { _ in }
+    ) {
         recorder.update { run in
             var stage = run[kind]
             stage.state = state

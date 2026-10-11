@@ -1,4 +1,5 @@
 import Foundation
+
 @testable import Bonsai
 
 enum LiveGitLab {
@@ -7,7 +8,9 @@ enum LiveGitLab {
         .deletingLastPathComponent().appendingPathComponent("tests/gitlab")
 
     static var env: [String: String] {
-        guard let text = try? String(contentsOf: directory.appendingPathComponent(".env"), encoding: .utf8) else { return [:] }
+        guard let text = try? String(contentsOf: directory.appendingPathComponent(".env"), encoding: .utf8) else {
+            return [:]
+        }
         var values: [String: String] = [:]
         for line in text.split(separator: "\n") {
             let parts = line.split(separator: "=", maxSplits: 1)
@@ -37,8 +40,9 @@ enum LiveGitLab {
     }
 
     static func seed(_ name: String) async throws -> Int {
-        let result = try await ProcessRunner.run("/bin/bash", [directory.appendingPathComponent("seed.sh").path, name],
-                                                 environment: ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"])
+        let result = try await ProcessRunner.run(
+            "/bin/bash", [directory.appendingPathComponent("seed.sh").path, name],
+            environment: ["PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin"])
         guard result.succeeded, let id = result.output.split(separator: "\n").last.flatMap({ Int($0) }) else {
             throw GitError(command: "seed.sh", status: result.status, output: result.output)
         }
@@ -52,7 +56,9 @@ enum LiveGitLab {
 
     static func project(_ id: Int) async throws -> Project {
         let gitlab: GitLabProject = try await client().get("projects/\(id)")
-        return Project(id: gitlab.id, name: gitlab.name, path: gitlab.path, webURL: gitlab.webURL, cloneURL: gitlab.cloneURL,
-                       defaultBranch: gitlab.defaultBranch ?? "main", targetBranch: "main", setup: "./scripts/setup.sh", test: "make test")
+        return Project(
+            id: gitlab.id, name: gitlab.name, path: gitlab.path, webURL: gitlab.webURL, cloneURL: gitlab.cloneURL,
+            defaultBranch: gitlab.defaultBranch ?? "main", targetBranch: "main", setup: "./scripts/setup.sh",
+            test: "make test")
     }
 }

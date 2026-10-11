@@ -42,8 +42,11 @@ struct ConnectView: View {
                 .foregroundStyle(.white)
                 .frame(width: 72, height: 72)
                 .background(
-                    LinearGradient(colors: [Color(red: 0.247, green: 0.690, blue: 0.416), Color(red: 0.122, green: 0.478, blue: 0.271)],
-                                   startPoint: .top, endPoint: .bottom),
+                    LinearGradient(
+                        colors: [
+                            Color(red: 0.247, green: 0.690, blue: 0.416), Color(red: 0.122, green: 0.478, blue: 0.271),
+                        ],
+                        startPoint: .top, endPoint: .bottom),
                     in: .rect(cornerRadius: 16)
                 )
                 .padding(.bottom, 8)
@@ -60,11 +63,13 @@ struct ConnectView: View {
         VStack(alignment: .leading, spacing: 8) {
             VStack(spacing: 0) {
                 row(L("connect.server")) {
-                    TextField(L("connect.server"), text: $model.server, prompt: Text(verbatim: "https://gitlab.example.com"))
-                        .textContentType(.URL)
-                        .focused($focus, equals: .server)
-                        .overlay(errorOutline(model.phase == .unreachable))
-                        .onSubmit { focus = .token }
+                    TextField(
+                        L("connect.server"), text: $model.server, prompt: Text(verbatim: "https://gitlab.example.com")
+                    )
+                    .textContentType(.URL)
+                    .focused($focus, equals: .server)
+                    .overlay(errorOutline(model.phase == .unreachable))
+                    .onSubmit { focus = .token }
                 }
                 Divider().padding(.leading, 12)
                 row(L("connect.token")) {
