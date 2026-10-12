@@ -409,6 +409,21 @@ struct MainSnapshotTests {
         return [("failed", failed), ("fixing", fixing), ("ready", ready), ("broken", broken)]
     }
 
+    @Test func reviewSheet() async throws {
+        let project = Project(
+            id: 1, name: "project-main", path: "group/project-main", webURL: URL(string: "https://x")!,
+            cloneURL: URL(string: "https://x.git")!, defaultBranch: "main", targetBranch: "main",
+            setup: "./scripts/setup.sh", test: "make test")
+        let proposal = Self.scenes()[2].1.proposal
+        for (appearance, suffix) in [(NSAppearance.Name.aqua, "light"), (.darkAqua, "dark")] {
+            try await Snapshot.save(
+                "main-review-\(suffix)", appearance: appearance,
+                ProjectSettingsSheet(
+                    project: project, client: nil, claudeSettings: ClaudeSettings(), proposal: proposal,
+                    onSave: { _ in }))
+        }
+    }
+
     @Test func mainScenes() async throws {
         let store = Store(directory: dir, keychain: keychain)
         let server = MockURLProtocol.server { _ in (404, Data()) }

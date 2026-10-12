@@ -69,6 +69,7 @@ struct MainPresentationTests {
         #expect(ready.bannerIcon == .star)
         #expect(ready.bannerBody == "Тестам нужен Postgres.")
         #expect(ready.group == .decide)
+        #expect(ready.actions == [.reject, .view])
 
         let broken = MainPresentation(Self.check(.broken), branch: "master")
         #expect(broken.icon == .brokenCross)

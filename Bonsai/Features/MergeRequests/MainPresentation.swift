@@ -5,9 +5,10 @@ import Foundation
 
 struct MainPresentation: Equatable {
     enum Action: Equatable, Hashable {
-        case edit, fix, pick, stop, reject
+        case edit, fix, pick, stop, reject, view
 
-        var isPrimary: Bool { self == .fix || self == .pick }
+        var isPrimary: Bool { self == .fix || self == .pick || self == .view }
+        var hasStar: Bool { self == .fix || self == .pick }
     }
 
     static let rowID = "main"
@@ -80,7 +81,7 @@ struct MainPresentation: Equatable {
             bannerTitle = statusText
             bannerBody = check.proposal?.summary ?? ""
             bodyLines = 2
-            actions = [.reject]
+            actions = [.reject, .view]
             group = .decide
         case .broken:
             statusText = localized("main.st.broken")

@@ -9,6 +9,7 @@ struct MainDetail: View {
     let check: MainCheck
     let onEdit: () -> Void
     @State private var opened: [Int: Bool] = [:]
+    @State private var reviewing = false
 
     var body: some View {
         let presentation = MainPresentation(check, branch: project.targetBranch)
@@ -34,6 +35,20 @@ struct MainDetail: View {
             .padding(.vertical, 20)
         }
         .frame(maxWidth: .infinity)
+        .sheet(isPresented: $reviewing) {
+            ProjectSettingsSheet(
+                project: project, client: workspace.client(), claudeSettings: workspace.store.settings.claude,
+                proposal: check.proposal,
+                onSave: { saved in
+                    workspace.update(saved)
+                    workspace.check(saved)
+                },
+                onApply: { saved in
+                    workspace.update(saved)
+                    workspace.applyMain(saved)
+                },
+                onReject: { workspace.rejectMain(project) })
+        }
     }
 
     private func isOpen(_ index: Int) -> Bool {
@@ -62,14 +77,14 @@ struct MainDetail: View {
     }
 
     private func visible(_ actions: [MainPresentation.Action]) -> [MainPresentation.Action] {
-        actions.filter { $0.isPrimary ? workspace.canFixMain(project) : true }
+        actions.filter { $0.hasStar ? workspace.canFixMain(project) : true }
     }
 
     @ViewBuilder private func actionButton(_ action: MainPresentation.Action) -> some View {
         let button = Button {
             perform(action)
         } label: {
-            if action.isPrimary {
+            if action.hasStar {
                 Label(action.title, systemImage: "sparkle")
             } else {
                 Text(verbatim: action.title)
@@ -89,6 +104,7 @@ struct MainDetail: View {
         case .fix, .pick: workspace.fixMain(project)
         case .stop: workspace.stopMain(project)
         case .reject: workspace.rejectMain(project)
+        case .view: reviewing = true
         }
     }
 }
@@ -101,6 +117,7 @@ extension MainPresentation.Action {
         case .pick: localized("main.pick")
         case .stop: localized("mr.stop")
         case .reject: localized("fix.reject")
+        case .view: localized("fix.view")
         }
     }
 }
