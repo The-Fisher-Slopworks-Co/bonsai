@@ -1,6 +1,6 @@
 # Bonsai — rules for Claude Code
 
-A native macOS app in Swift. Mockups live on the Claude Design canvas "Bonsai" (https://claude.ai/artifact/P1SAHFK3bHzvTYsAoiTokG; artboards and design notes).
+A native macOS app in Swift.
 
 ## Stack
 
@@ -32,8 +32,8 @@ The pipeline logic (`Core/Pipeline`) knows nothing about the UI and is fully cov
   // SPDX-License-Identifier: AGPL-3.0-or-later
   // Copyright (C) 2026 The Fisher Slopworks Co
   ```
-- Take UI texts verbatim from `BZ_STRINGS` in the mockups, both languages. Don't invent new wording, don't add hints or explanations that aren't in the mockups.
-- Follow the HIG: system fonts and colors, standard controls, standard sheet and alert sizes. No custom embellishments beyond the mockups.
+- UI texts live in `tools/strings.py`, both languages; it generates `Localizable.xcstrings`.
+- Follow the HIG: system fonts and colors, standard controls, standard sheet and alert sizes. No custom embellishments.
 
 ## Prohibitions
 
