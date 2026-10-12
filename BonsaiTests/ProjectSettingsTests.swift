@@ -31,6 +31,27 @@ struct ProjectSettingsModelTests {
         #expect(saved.rules == "Не трогай migrations/")
     }
 
+    @Test func claudeProposalPrefillsAndTracksEdits() {
+        let proposal = MainCheck.Proposal(
+            stages: [],
+            commands: MainCheck.Commands(setup: "docker compose up -d\n./scripts/setup.sh", test: "make test"),
+            summary: "Тестам нужен Postgres.")
+        let model = ProjectSettingsModel(project: PipelineTests.project, client: nil, proposal: proposal)
+        #expect(model.draft.setup == "docker compose up -d\n./scripts/setup.sh")
+        #expect(!model.isEdited)
+        #expect(model.was(.setup) == "./scripts/setup.sh")
+        #expect(model.was(.test) == nil)
+
+        model.draft.test = "make check"
+        #expect(model.isEdited)
+        #expect(model.was(.test) == "make test")
+
+        let manual = ProjectSettingsModel(project: PipelineTests.project, client: nil)
+        manual.draft.setup = "npm ci"
+        #expect(manual.was(.setup) == "./scripts/setup.sh")
+        #expect(!manual.isEdited)
+    }
+
     @Test func currentBranchStaysInList() {
         let model = ProjectSettingsModel(project: PipelineTests.project, client: nil)
         #expect(model.branchNames == ["main"])

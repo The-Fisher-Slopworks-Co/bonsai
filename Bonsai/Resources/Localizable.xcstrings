@@ -1439,6 +1439,23 @@
         }
       }
     },
+    "main.apply": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Применить"
+          }
+        }
+      }
+    },
     "main.bn.brokenBody": {
       "extractionState": "manual",
       "localizations": {
@@ -1626,6 +1643,40 @@
         }
       }
     },
+    "main.check": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check on %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проверить на %@"
+          }
+        }
+      }
+    },
+    "main.codeUntouched": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "code untouched"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "код не менялся"
+          }
+        }
+      }
+    },
     "main.edit": {
       "extractionState": "manual",
       "localizations": {
@@ -1656,6 +1707,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ждут %@"
+          }
+        }
+      }
+    },
+    "main.later": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Позже"
           }
         }
       }
@@ -1985,6 +2053,23 @@
         }
       }
     },
+    "main.verified": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tests passed on %@"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "тесты прошли на %@"
+          }
+        }
+      }
+    },
     "main.waiting": {
       "extractionState": "manual",
       "localizations": {
@@ -1998,6 +2083,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "ждут %@"
+          }
+        }
+      }
+    },
+    "main.was": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was: "
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Было: "
           }
         }
       }

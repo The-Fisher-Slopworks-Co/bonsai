@@ -7,15 +7,38 @@ import Observation
 @MainActor
 @Observable
 final class ProjectSettingsModel {
+    enum Command { case setup, test }
+
     let original: Project
     var draft: Project
+    let proposal: MainCheck.Proposal?
     private(set) var branches: [GitLabBranch] = []
     private let client: GitLabClient?
 
-    init(project: Project, client: GitLabClient?) {
+    init(project: Project, client: GitLabClient?, proposal: MainCheck.Proposal? = nil) {
         original = project
         draft = project
+        self.proposal = proposal
         self.client = client
+        if let commands = proposal?.commands {
+            draft.setup = commands.setup
+            draft.test = commands.test
+        }
+    }
+
+    var isEdited: Bool {
+        guard let proposed = proposal?.commands else { return false }
+        return MainCheck.Commands(draft) != proposed
+    }
+
+    func was(_ command: Command) -> String? {
+        let old = MainPipeline.oneLine(value(command, in: original))
+        guard !old.isEmpty, MainPipeline.oneLine(value(command, in: draft)) != old else { return nil }
+        return old
+    }
+
+    private func value(_ command: Command, in project: Project) -> String {
+        command == .setup ? project.setup : project.test
     }
 
     var hasChanges: Bool { draft != original }
