@@ -10,7 +10,8 @@ import Testing
 struct WorkspaceFixTests {
     func fixture(claude: FakeClaude, configure: (Store) -> Void = { _ in }) async throws -> WorkspaceTests.Fixture {
         let base = WorkspaceTests()
-        let f = try await base.fixture(test: "[ -f fixed ] || { echo 'FAIL needs fixed'; exit 1; }")
+        let f = try await base.fixture(
+            test: "[ ! -f feature.txt ] || [ -f fixed ] || { echo 'FAIL needs fixed'; exit 1; }")
         f.workspace.claude = ClaudeCLI.Check(path: "/usr/bin/true", status: .ready)
         f.workspace.makeClaudeRunner = { claude }
         f.workspace.fixConfig.ciPollInterval = 0.05

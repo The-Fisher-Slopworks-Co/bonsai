@@ -30,6 +30,7 @@ final class FakeEffects: PipelineEffects, @unchecked Sendable {
     func sha(_ ref: String) async throws -> String { ref == "origin/main" ? "base1" : "head1" }
     func behind(head: String, base: String) async throws -> Int { behindCount }
     func checkout(_ branch: String, log: @escaping LogSink) async throws { record("checkout \(branch)") }
+    func detach(_ ref: String, log: @escaping LogSink) async throws { record("detach \(ref)") }
     func rebase(onto ref: String, log: @escaping LogSink) async throws -> RebaseResult {
         record("rebase \(ref)")
         if conflictFiles.isEmpty { return .ok }

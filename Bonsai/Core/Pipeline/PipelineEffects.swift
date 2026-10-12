@@ -35,6 +35,7 @@ protocol PipelineEffects: Sendable {
     func sha(_ ref: String) async throws -> String
     func behind(head: String, base: String) async throws -> Int
     func checkout(_ branch: String, log: @escaping LogSink) async throws
+    func detach(_ ref: String, log: @escaping LogSink) async throws
     func rebase(onto ref: String, log: @escaping LogSink) async throws -> RebaseResult
     func abortRebase(log: @escaping LogSink) async
     func run(_ command: String, log: @escaping LogSink) async throws -> Bool

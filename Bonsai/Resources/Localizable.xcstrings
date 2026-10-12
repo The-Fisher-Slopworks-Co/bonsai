@@ -1439,6 +1439,40 @@
         }
       }
     },
+    "main.sub.ciFail": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "main pipeline failed"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pipeline main упал"
+          }
+        }
+      }
+    },
+    "main.sub.ciOk": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "main pipeline passed"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pipeline main прошёл"
+          }
+        }
+      }
+    },
     "menu.attention": {
       "extractionState": "manual",
       "localizations": {
@@ -2567,6 +2601,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "с"
+          }
+        }
+      }
+    },
+    "mr.stage.checkout": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checkout"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checkout"
           }
         }
       }

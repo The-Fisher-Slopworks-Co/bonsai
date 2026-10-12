@@ -22,14 +22,24 @@ struct LivePipelineEffects: PipelineEffects {
     }
 
     func checkout(_ branch: String, log: @escaping LogSink) async throws {
+        try await abortStaleRebase()
+        try await git.checked(
+            ["checkout", "--quiet", "--force", "-B", branch, "origin/\(branch)"], onLine: output(log))
+        try await git.checked(["clean", "-fdq"])
+    }
+
+    func detach(_ ref: String, log: @escaping LogSink) async throws {
+        try await abortStaleRebase()
+        try await git.checked(["checkout", "--force", "--detach", ref], onLine: output(log))
+        try await git.checked(["clean", "-fdq"])
+    }
+
+    private func abortStaleRebase() async throws {
         if FileManager.default.fileExists(atPath: git.directory.appendingPathComponent(".git/rebase-merge").path)
             || FileManager.default.fileExists(atPath: git.directory.appendingPathComponent(".git/rebase-apply").path)
         {
             try await git.run(["rebase", "--abort"])
         }
-        try await git.checked(
-            ["checkout", "--quiet", "--force", "-B", branch, "origin/\(branch)"], onLine: output(log))
-        try await git.checked(["clean", "-fdq"])
     }
 
     func rebase(onto ref: String, log: @escaping LogSink) async throws -> RebaseResult {
