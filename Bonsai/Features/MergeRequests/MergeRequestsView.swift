@@ -7,9 +7,12 @@ struct ProjectDetail: View {
     @Environment(Workspace.self) private var workspace
     let project: Project
     @Binding var selection: String?
+    let onEdit: () -> Void
 
     var body: some View {
         let state = workspace.state(project)
+        let check = workspace.mainCheck(project).flatMap { MainPresentation.isVisible($0) ? $0 : nil }
+        let waiting = workspace.isWaiting(project) ? project.targetBranch : nil
         Group {
             if state.loading == .loading {
                 HStack(spacing: 8) {
@@ -17,7 +20,7 @@ struct ProjectDetail: View {
                     Text(verbatim: localized("projects.loading")).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if state.mergeRequests.isEmpty {
+            } else if state.mergeRequests.isEmpty && check == nil {
                 ContentUnavailableView {
                     Label {
                         Text(verbatim: localized("mr.noMrsTitle"))
@@ -32,44 +35,98 @@ struct ProjectDetail: View {
             } else {
                 let items = state.mergeRequests.map { ($0, workspace.run($0)) }
                 HStack(spacing: 0) {
-                    MRList(items: items, selection: $selection)
+                    MRList(items: items, project: project, main: check, waitingOn: waiting, selection: $selection)
                         .frame(width: 340)
                     Divider()
-                    if let mr = state.mergeRequests.first(where: { $0.id == selection }) {
-                        MRDetail(mr: mr, run: workspace.run(mr))
+                    if let check, selection == MainPresentation.rowID {
+                        MainDetail(project: project, check: check, onEdit: onEdit)
+                            .id(MainPresentation.rowID)
+                    } else if let mr = state.mergeRequests.first(where: { $0.id == selection }) {
+                        MRDetail(mr: mr, run: workspace.run(mr), waitingOn: waiting)
                             .id(mr.id)
                     } else {
                         Color.clear
                     }
                 }
-                .onAppear { selectFirstIfNeeded(items) }
-                .onChange(of: state.mergeRequests.map(\.id)) { selectFirstIfNeeded(items) }
+                .onAppear { selectFirstIfNeeded(items, main: check, waitingOn: waiting) }
+                .onChange(of: state.mergeRequests.map(\.id)) {
+                    selectFirstIfNeeded(items, main: check, waitingOn: waiting)
+                }
+                .onChange(of: check == nil) { selectFirstIfNeeded(items, main: check, waitingOn: waiting) }
             }
         }
     }
 
-    private func selectFirstIfNeeded(_ items: [(MergeRequest, MRRun)]) {
-        guard selection == nil || !items.contains(where: { $0.0.id == selection }) else { return }
-        selection = MRPresentation.groups(items).first?.items.first?.0.id
+    private func selectFirstIfNeeded(_ items: [(MergeRequest, MRRun)], main: MainCheck?, waitingOn: String?) {
+        let mainSelected = selection == MainPresentation.rowID && main != nil
+        guard selection == nil || !(mainSelected || items.contains(where: { $0.0.id == selection })) else { return }
+        let group = main.map { MainPresentation($0, branch: project.targetBranch).group }
+        let first = MRPresentation.groups(items, waitingOn: waitingOn, main: group).first
+        selection = first?.main == true ? MainPresentation.rowID : first?.items.first?.0.id
     }
 }
 
 struct MRList: View {
     let items: [(MergeRequest, MRRun)]
+    let project: Project
+    let main: MainCheck?
+    let waitingOn: String?
     @Binding var selection: String?
 
     var body: some View {
+        let presentation = main.map { MainPresentation($0, branch: project.targetBranch) }
         List(selection: $selection) {
-            ForEach(MRPresentation.groups(items), id: \.title) { group in
+            ForEach(MRPresentation.groups(items, waitingOn: waitingOn, main: presentation?.group), id: \.title) {
+                group in
                 Section(group.title) {
+                    if group.main, let main, let presentation {
+                        MainRow(check: main, branch: project.targetBranch, presentation: presentation)
+                            .tag(MainPresentation.rowID)
+                    }
                     ForEach(group.items, id: \.0.id) { mr, run in
-                        MRRow(mr: mr, presentation: MRPresentation(run))
+                        MRRow(mr: mr, presentation: MRPresentation(run, waitingOn: waitingOn))
                             .tag(mr.id)
                     }
                 }
             }
         }
         .accessibilityLabel(localized("mr.list"))
+    }
+}
+
+struct MainRow: View {
+    let check: MainCheck
+    let branch: String
+    let presentation: MainPresentation
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            StatusIcon(icon: presentation.icon, size: 16)
+                .padding(.top, 1)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 8) {
+                    Text(verbatim: branch)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Text(verbatim: String(check.sha.prefix(7)))
+                        .font(.system(size: 11).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                let commands = MainPresentation.commandsLine(check.commands)
+                if !commands.isEmpty {
+                    Text(verbatim: commands)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                Text(verbatim: presentation.statusText)
+                    .font(.system(size: 12, weight: presentation.tone == .blue ? .medium : .regular))
+                    .foregroundStyle(presentation.tone.color)
+            }
+        }
+        .padding(.vertical, 6)
     }
 }
 
@@ -111,20 +168,29 @@ struct MRDetail: View {
     @Environment(Workspace.self) private var workspace
     let mr: MergeRequest
     let run: MRRun
+    var waitingOn: String?
     @State private var opened: [StageKind: Bool] = [:]
     @State private var reviewing = false
     @State private var confirmRevert = false
 
     var body: some View {
-        let presentation = MRPresentation(run)
+        let presentation = MRPresentation(run, waitingOn: waitingOn)
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
-                if run.status != .unknown {
-                    banner(presentation)
+                if run.status != .unknown || waitingOn != nil {
+                    Banner(
+                        icon: presentation.icon, title: presentation.bannerTitle, text: presentation.bannerBody,
+                        lines: presentation.bodyLines
+                    ) {
+                        ForEach(visible(presentation.actions), id: \.self) { action in
+                            actionButton(action)
+                        }
+                    }
                 }
                 VStack(spacing: 0) {
-                    ForEach(Array(MRPresentation.stages(run).enumerated()), id: \.offset) { _, stage in
+                    ForEach(Array(MRPresentation.stages(run, waitingOn: waitingOn).enumerated()), id: \.offset) {
+                        _, stage in
                         StageRow(stage: stage, isOpen: isOpen(stage.kind)) {
                             opened[stage.kind] = !isOpen(stage.kind)
                         }
@@ -150,7 +216,7 @@ struct MRDetail: View {
     }
 
     private func isOpen(_ kind: StageKind) -> Bool {
-        opened[kind] ?? (MRPresentation.autoOpen(run) == kind)
+        opened[kind] ?? (MRPresentation.autoOpen(run, waitingOn: waitingOn) == kind)
     }
 
     private var header: some View {
@@ -188,34 +254,6 @@ struct MRDetail: View {
         }
     }
 
-    private func banner(_ presentation: MRPresentation) -> some View {
-        HStack(spacing: 12) {
-            StatusIcon(icon: presentation.icon, size: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(verbatim: presentation.bannerTitle)
-                    .fontWeight(.semibold)
-                if !presentation.bannerBody.isEmpty {
-                    Text(verbatim: presentation.bannerBody)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(presentation.bodyLines)
-                        .truncationMode(.tail)
-                }
-            }
-            Spacer(minLength: 8)
-            HStack(spacing: 8) {
-                ForEach(visible(presentation.actions), id: \.self) { action in
-                    actionButton(action)
-                }
-            }
-            .controlSize(.large)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .frame(minHeight: 60)
-        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 12))
-    }
-
     @ViewBuilder private func actionButton(_ action: MRPresentation.Action) -> some View {
         let button = Button {
             perform(action)
@@ -247,6 +285,40 @@ struct MRDetail: View {
         case .terminal: workspace.continueInTerminal(mr)
         case .recheck: workspace.recheckFix(mr)
         }
+    }
+}
+
+struct Banner<Actions: View>: View {
+    let icon: MRPresentation.Icon
+    let title: String
+    let text: String
+    let lines: Int
+    @ViewBuilder let actions: Actions
+
+    var body: some View {
+        HStack(spacing: 12) {
+            StatusIcon(icon: icon, size: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(verbatim: title)
+                    .fontWeight(.semibold)
+                if !text.isEmpty {
+                    Text(verbatim: text)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(lines)
+                        .truncationMode(.tail)
+                }
+            }
+            Spacer(minLength: 8)
+            HStack(spacing: 8) {
+                actions
+            }
+            .controlSize(.large)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(minHeight: 60)
+        .background(.quaternary.opacity(0.5), in: .rect(cornerRadius: 12))
     }
 }
 
@@ -293,9 +365,12 @@ struct StageRow: View {
             }
             .buttonStyle(.plain)
             if isOpen && !stage.log.isEmpty {
-                LogBox(lines: stage.log, state: stage.state, thinking: stage.kind == .claude && stage.state == .running)
-                    .padding(.leading, 36)
-                    .padding(.bottom, 6)
+                LogBox(
+                    lines: stage.log, state: stage.state,
+                    thinking: (stage.kind == .claude || stage.kind == .pick) && stage.state == .running
+                )
+                .padding(.leading, 36)
+                .padding(.bottom, 6)
             }
         }
     }

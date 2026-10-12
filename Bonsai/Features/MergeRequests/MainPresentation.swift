@@ -6,7 +6,11 @@ import Foundation
 struct MainPresentation: Equatable {
     enum Action: Equatable, Hashable {
         case edit, fix, pick, stop, reject
+
+        var isPrimary: Bool { self == .fix || self == .pick }
     }
+
+    static let rowID = "main"
 
     var statusText: String
     var icon: MRPresentation.Icon
