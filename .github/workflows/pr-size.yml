@@ -19,3 +19,7 @@ permissions:
 jobs:
   pr-size:
     uses: The-Fisher-Slopworks-Co/.github/.github/workflows/pr-size.yml@main
+    with:
+      exclude: |
+        ^BonsaiTests/
+        \.xcstrings$
