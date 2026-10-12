@@ -43,6 +43,13 @@ struct Stage: Codable, Equatable, Sendable {
     var startedAt: Date?
     var duration: TimeInterval?
     var log: [LogLine] = []
+
+    static let maxLogLines = 2000
+
+    mutating func append(_ line: LogLine) {
+        log.append(line)
+        if log.count > Self.maxLogLines { log.removeFirst(log.count - Self.maxLogLines) }
+    }
 }
 
 enum MRStatus: Codable, Equatable, Sendable {
@@ -86,5 +93,15 @@ struct MRRun: Codable, Equatable, Sendable {
 
     mutating func resetStages() {
         stages = StageKind.pipeline.map { Stage(kind: $0) }
+    }
+}
+
+extension MRRun: Recordable {
+    mutating func append(_ line: LogLine, to kind: StageKind, fix: Bool) {
+        if fix {
+            self.fix?[kind].append(line)
+        } else {
+            self[kind].append(line)
+        }
     }
 }
