@@ -27,25 +27,6 @@ struct AddProjectModelTests {
         if path.hasSuffix("/repository/branches") {
             return (200, json(#"[{"name": "develop", "default": false}, {"name": "main", "default": true}]"#))
         }
-        if path.hasSuffix("/repository/tree") {
-            if path.contains("/projects/1/") {
-                return (200, json(#"[{"name": "Makefile", "type": "blob"}, {"name": "scripts", "type": "tree"}]"#))
-            }
-            if path.contains("/projects/2/") {
-                return (
-                    200,
-                    json(#"[{"name": "package.json", "type": "blob"}, {"name": "package-lock.json", "type": "blob"}]"#)
-                )
-            }
-            return (200, json("[]"))
-        }
-        if path.contains("/projects/1/repository/files/Makefile/raw") { return (200, Data("test:\n\ttrue\n".utf8)) }
-        if url.absoluteString.contains("/projects/1/repository/files/scripts%2Fsetup.sh/raw") {
-            return (200, Data("#!/bin/sh".utf8))
-        }
-        if path.contains("/projects/2/repository/files/package.json/raw") {
-            return (200, Data(#"{"scripts": {"test": "jest"}}"#.utf8))
-        }
         return (404, Data())
     }
 
@@ -55,7 +36,7 @@ struct AddProjectModelTests {
         return AddProjectModel(client: client, excluded: excluded, debounce: .milliseconds(1))
     }
 
-    @Test func firstResultSelectedWithDetection() async {
+    @Test func commandsStartEmptyForClaudeToPick() async {
         let model = model()
         model.start()
         await model.settle()
@@ -64,13 +45,12 @@ struct AddProjectModelTests {
         #expect(model.selected?.path == "g/project-main")
         #expect(model.branches.map(\.name) == ["main", "develop"])
         #expect(model.branch == "main")
-        #expect(model.setup == "./scripts/setup.sh")
-        #expect(model.test == "make test")
-        #expect(model.detectedFrom == "Makefile")
+        #expect(model.setup.isEmpty)
+        #expect(model.test.isEmpty)
         #expect(model.canAdd)
         let project = model.project()
         #expect(project?.targetBranch == "main")
-        #expect(project?.test == "make test")
+        #expect(project?.test == "")
     }
 
     @Test func searchFiltersAndExcludesAdded() async {
@@ -83,34 +63,21 @@ struct AddProjectModelTests {
         await model.settle()
         #expect(model.results.map(\.id) == [3])
         #expect(model.selectedID == 3)
-        #expect(model.test.isEmpty)
-        #expect(!model.canAdd)
-        model.test = "./check.sh"
-        #expect(model.canAdd)
-        #expect(model.detectedFrom == nil)
     }
 
-    @Test func pickingAnotherProjectRedetects() async {
+    @Test func typedCommandsAreTrimmedAndResetWithTheProject() async {
         let model = model()
         model.start()
         await model.settle()
         await model.settle()
+        model.setup = " npm ci \n"
+        model.test = " npm test "
+        #expect(model.project()?.setup == "npm ci")
+        #expect(model.project()?.test == "npm test")
         model.selectedID = 2
         await model.settle()
-        #expect(model.setup == "npm ci")
-        #expect(model.test == "npm test")
-        #expect(model.testHint.contains("package.json"))
-    }
-
-    @Test func editingTestDropsSourceHint() async {
-        let model = model()
-        model.start()
-        await model.settle()
-        await model.settle()
-        #expect(model.detectedFrom == "Makefile")
-        model.test = "make check"
-        #expect(model.detectedFrom == nil)
-        #expect(!model.testHint.contains("Makefile"))
+        #expect(model.setup.isEmpty)
+        #expect(model.test.isEmpty)
     }
 
     @Test func emptySearch() async {

@@ -29,11 +29,11 @@ struct AddProjectSheet: View {
                 }
                 GridRow {
                     label("projects.setup")
-                    command($model.setup, placeholder: "./scripts/setup.sh", hint: localized("projects.setupHint"))
+                    command($model.setup)
                 }
                 GridRow {
                     label("projects.test")
-                    command($model.test, placeholder: "make test", hint: model.testHint)
+                    command($model.test)
                 }
             }
             HStack {
@@ -112,16 +112,11 @@ struct AddProjectSheet: View {
         .disabled(model.branches.isEmpty)
     }
 
-    private func command(_ text: Binding<String>, placeholder: String, hint: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            TextField("", text: text, prompt: Text(verbatim: placeholder), axis: .vertical)
-                .font(.system(size: 12, design: .monospaced))
-                .lineLimit(1...4)
-                .textFieldStyle(.roundedBorder)
-                .autocorrectionDisabled()
-            Text(verbatim: hint)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-        }
+    private func command(_ text: Binding<String>) -> some View {
+        TextField("", text: text, prompt: Text(verbatim: localized("projects.pickPh")), axis: .vertical)
+            .font(.system(size: 12, design: .monospaced))
+            .lineLimit(1...4)
+            .textFieldStyle(.roundedBorder)
+            .autocorrectionDisabled()
     }
 }
