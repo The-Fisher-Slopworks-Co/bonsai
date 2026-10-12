@@ -27,6 +27,9 @@ struct StatusItemTests {
         var ok = MRRun()
         ok.status = .upToDate(pushed: false)
         store.saveRuns([failing.id: failed, fine.id: ok])
+        store.saveMainChecks([
+            project.id: MainCheck(phase: .passed, sha: "base1", commands: MainCheck.Commands(project))
+        ])
 
         let app = AppModel(store: store)
         let controller = StatusItemController(app: app)

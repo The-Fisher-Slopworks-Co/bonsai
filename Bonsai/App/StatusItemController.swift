@@ -38,8 +38,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     private func model() -> MenuBarModel {
-        MenuBarModel(
-            items: app.workspace.allMergeRequests.map { ($0.0, app.workspace.run($0.0)) },
+        let workspace = app.workspace
+        let projects = app.store.projects
+        return MenuBarModel(
+            items: workspace.allMergeRequests.map { ($0.0, workspace.run($0.0)) },
+            mains: projects.compactMap { project in
+                workspace.mainCheck(project).map {
+                    MenuBarModel.Main(
+                        project: project, check: $0, mergeRequests: workspace.state(project).mergeRequests.count)
+                }
+            },
+            waiting: Set(projects.filter(workspace.isWaiting).map(\.id)),
             isChecking: app.workspace.isChecking, lastCheck: app.workspace.lastCheck,
             pausedUntil: app.scheduler.pausedUntil)
     }
@@ -119,7 +128,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         let text = NSMutableAttributedString(string: entry.title, attributes: [.font: NSFont.menuFont(ofSize: 13)])
         text.append(
             NSAttributedString(
-                string: "  !\(entry.iid)",
+                string: "  \(entry.idText)",
                 attributes: [.font: NSFont.menuFont(ofSize: 11), .foregroundColor: NSColor.secondaryLabelColor]))
         text.append(
             NSAttributedString(

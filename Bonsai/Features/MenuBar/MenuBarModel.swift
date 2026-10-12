@@ -10,10 +10,16 @@ struct MenuBarModel: Equatable {
         case checked(Date?)
     }
 
+    struct Main: Equatable {
+        var project: Project
+        var check: MainCheck
+        var mergeRequests: Int
+    }
+
     struct Item: Equatable {
         var mrID: String
         var projectID: Int
-        var iid: Int
+        var idText: String
         var title: String
         var status: String
         var icon: MRPresentation.Icon
@@ -32,7 +38,11 @@ struct MenuBarModel: Equatable {
     var isWorking: Bool
     var isPaused: Bool
 
-    init(items: [(MergeRequest, MRRun)], isChecking: Bool, lastCheck: Date?, pausedUntil: Date?) {
+    init(
+        items: [(MergeRequest, MRRun)], mains: [Main] = [], waiting: Set<Int> = [], isChecking: Bool,
+        lastCheck: Date?, pausedUntil: Date?
+    ) {
+        let items = items.filter { !waiting.contains($0.0.projectID) }
         if let pausedUntil {
             header = .paused(until: pausedUntil)
         } else if isChecking {
@@ -44,11 +54,20 @@ struct MenuBarModel: Equatable {
         func item(_ mr: MergeRequest, _ run: MRRun) -> Item {
             let presentation = MRPresentation(run)
             return Item(
-                mrID: mr.id, projectID: mr.projectID, iid: mr.iid, title: mr.title, status: presentation.statusText,
+                mrID: mr.id, projectID: mr.projectID, idText: "!\(mr.iid)", title: mr.title,
+                status: presentation.statusText, icon: presentation.icon, tone: presentation.tone)
+        }
+        let mainItems = mains.filter { MainPresentation.isVisible($0.check) }.map { main in
+            let presentation = MainPresentation(main.check, branch: main.project.targetBranch)
+            let item = Item(
+                mrID: MainPresentation.rowID, projectID: main.project.id,
+                idText: localized("mr.count", main.mergeRequests), title: main.project.name,
+                status: presentation.group == .attention ? presentation.bannerTitle : presentation.statusText,
                 icon: presentation.icon, tone: presentation.tone)
+            return (presentation.group, item)
         }
         func members(_ group: MRPresentation.Group) -> [Item] {
-            items.filter { MRPresentation($0.1).group == group }.map(item)
+            mainItems.filter { $0.0 == group }.map(\.1) + items.filter { MRPresentation($0.1).group == group }.map(item)
         }
         let decide = members(.decide)
         let working = members(.working)
