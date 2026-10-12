@@ -126,7 +126,7 @@ struct WorkspaceTests {
     }
 
     @Test func failingTestsKeepStatusUntilForced() async throws {
-        let f = try await fixture(test: "echo 'test result: FAILED'; exit 1")
+        let f = try await fixture(test: "[ ! -f feature.txt ] || { echo 'test result: FAILED'; exit 1; }")
         defer {
             f.store.signOut()
             f.repo.remove()
@@ -163,7 +163,7 @@ struct WorkspaceTests {
     }
 
     @Test func stopReturnsToBehind() async throws {
-        let f = try await fixture(test: "sleep 30")
+        let f = try await fixture(test: "[ ! -f feature.txt ] || sleep 30")
         defer {
             f.store.signOut()
             f.repo.remove()
@@ -203,6 +203,82 @@ struct WorkspaceTests {
         f.workspace.rerunCI(mr)
         await f.workspace.waitUntilIdle()
         #expect(f.workspace.run(mr).status == .upToDate(pushed: true))
+    }
+
+    @Test func mainIsCheckedBeforeMergeRequests() async throws {
+        let f = try await fixture()
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
+        f.workspace.add(f.project)
+        await f.workspace.waitUntilIdle()
+        let check = try #require(f.workspace.mainCheck(f.project))
+        let main = try await f.repo.sh("git --git-dir=\(f.repo.origin.path) rev-parse main", in: f.repo.root)
+        #expect(check.phase == .passed)
+        #expect(check.sha == main)
+        #expect(!f.workspace.isWaiting(f.project))
+        #expect(f.store.loadMainChecks()[f.project.id]?.phase == .passed)
+    }
+
+    @Test func failingMainBlocksMergeRequestsUntilCommandsChange() async throws {
+        let f = try await fixture(test: "echo 'test result: FAILED'; exit 1")
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
+        f.workspace.add(f.project)
+        await f.workspace.waitUntilIdle()
+        let mr = try #require(f.workspace.state(f.project).mergeRequests.first)
+        #expect(f.workspace.mainCheck(f.project)?.phase == .failed)
+        #expect(f.workspace.mainCheck(f.project)?.failedStage == .test)
+        #expect(f.workspace.isWaiting(f.project))
+        #expect(f.workspace.run(mr).status == .unknown)
+
+        let finished = f.workspace.mainCheck(f.project)?.finishedAt
+        f.workspace.check(f.project)
+        await f.workspace.waitUntilIdle()
+        #expect(f.workspace.mainCheck(f.project)?.finishedAt == finished)
+
+        f.workspace.check(f.project, recheck: true)
+        await f.workspace.waitUntilIdle()
+        #expect(f.workspace.mainCheck(f.project)?.finishedAt != finished)
+
+        var fixed = f.project
+        fixed.test = "true"
+        f.workspace.update(fixed)
+        f.workspace.check(fixed)
+        await f.workspace.waitUntilIdle()
+        #expect(f.workspace.mainCheck(fixed)?.phase == .passed)
+        #expect(f.workspace.run(mr).status == .upToDate(pushed: true))
+    }
+
+    @Test func brokenMainWaitsForANewCommit() async throws {
+        let f = try await fixture(test: "[ ! -f broken.txt ]")
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
+        f.workspace.add(f.project)
+        await f.workspace.waitUntilIdle()
+        #expect(f.workspace.mainCheck(f.project)?.phase == .passed)
+
+        try await f.repo.sh("git checkout -q main", in: f.repo.seed)
+        try f.repo.write("broken.txt", "x\n")
+        try await f.repo.commit("break main")
+        try await f.repo.sh("git push -q origin main", in: f.repo.seed)
+        f.gitlab.pipelineStatus = "failed"
+        f.workspace.check(f.project)
+        await f.workspace.waitUntilIdle()
+        #expect(f.workspace.mainCheck(f.project)?.phase == .broken)
+        #expect(f.workspace.isWaiting(f.project))
+
+        try await f.repo.sh("git rm -q broken.txt", in: f.repo.seed)
+        try await f.repo.commit("fix main")
+        try await f.repo.sh("git push -q origin main", in: f.repo.seed)
+        f.workspace.check(f.project)
+        await f.workspace.waitUntilIdle()
+        #expect(f.workspace.mainCheck(f.project)?.phase == .passed)
     }
 
     @Test func filtersDraftsLabelsAndOtherTargets() async throws {

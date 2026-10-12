@@ -93,6 +93,14 @@ final class Store {
         write(runs, to: "runs.json")
     }
 
+    func loadMainChecks() -> [Int: MainCheck] {
+        Self.read([Int: MainCheck].self, from: directory.appendingPathComponent("main-checks.json")) ?? [:]
+    }
+
+    func saveMainChecks(_ checks: [Int: MainCheck]) {
+        write(checks, to: "main-checks.json")
+    }
+
     func loadMergeRequests() -> [Int: [MergeRequest]] {
         Self.read([Int: [MergeRequest]].self, from: directory.appendingPathComponent("merge-requests.json")) ?? [:]
     }

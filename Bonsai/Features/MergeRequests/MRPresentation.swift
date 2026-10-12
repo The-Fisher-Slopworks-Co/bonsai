@@ -266,6 +266,9 @@ struct MRPresentation: Equatable {
         case .claudeResolved: localized("fix.claudeResolved", Int(stage.detail) ?? 0)
         case .claudeFailed: localized("fix.claudeFail", Int(stage.detail) ?? 0)
         case .afterFix: localized("fix.sub.afterFix", stage.detail)
+        case .ref: stage.detail
+        case .mainCiPassed: localized("main.sub.ciOk")
+        case .mainCiFailed: localized("main.sub.ciFail")
         }
     }
 

@@ -35,6 +35,7 @@ final class Workspace {
 
     private(set) var states: [Int: ProjectState] = [:]
     private(set) var runs: [String: MRRun]
+    private(set) var mainChecks: [Int: MainCheck]
     private(set) var connectionLost = false
     var claude: ClaudeCLI.Check?
     var makeClaudeRunner: () -> any ClaudeRunning = { LiveClaudeRunner() }
@@ -44,6 +45,9 @@ final class Workspace {
     private var workers: [Int: Task<Void, Never>] = [:]
     private var again: Set<Int> = []
     private var forced: [Int: [String]] = [:]
+    private var recheckMain: Set<Int> = []
+    private var mainGenerations: [Int: Int] = [:]
+    private var mainRevisions: [Int: Int] = [:]
     private var mrTasks: [String: Task<Void, Never>] = [:]
     private var stopped: Set<String> = []
     private var behindCounts: [String: Int] = [:]
@@ -55,6 +59,7 @@ final class Workspace {
         self.store = store
         self.configuration = configuration
         runs = store.loadRuns()
+        mainChecks = store.loadMainChecks()
         for (id, run) in runs where !run.status.isFinal {
             runs[id]?.status = .unknown
         }
@@ -72,6 +77,14 @@ final class Workspace {
 
     func run(_ mr: MergeRequest) -> MRRun {
         runs[mr.id] ?? MRRun()
+    }
+
+    func mainCheck(_ project: Project) -> MainCheck? {
+        mainChecks[project.id]
+    }
+
+    func isWaiting(_ project: Project) -> Bool {
+        mainChecks[project.id]?.phase != .passed
     }
 
     func project(for mr: MergeRequest) -> Project? {
@@ -119,7 +132,9 @@ final class Workspace {
         store.projects.removeAll { $0.id == project.id }
         for mr in state(project).mergeRequests { runs[mr.id] = nil }
         states[project.id] = nil
+        mainChecks[project.id] = nil
         store.saveRuns(runs)
+        store.saveMainChecks(mainChecks)
         store.saveMergeRequests(states.compactMapValues { $0.loading == .loaded ? $0.mergeRequests : nil })
         try? FileManager.default.removeItem(at: store.cloneDirectory(for: project))
     }
@@ -129,12 +144,13 @@ final class Workspace {
         for task in mrTasks.values { task.cancel() }
     }
 
-    func checkAll() {
-        for project in store.projects where !project.paused { check(project) }
+    func checkAll(recheck: Bool = false) {
+        for project in store.projects where !project.paused { check(project, recheck: recheck) }
     }
 
-    func check(_ project: Project, force: [String] = []) {
+    func check(_ project: Project, force: [String] = [], recheck: Bool = false) {
         if !force.isEmpty { forced[project.id, default: []].append(contentsOf: force) }
+        if recheck { recheckMain.insert(project.id) }
         if workers[project.id] != nil {
             again.insert(project.id)
             return
@@ -236,6 +252,9 @@ final class Workspace {
         states[project.id] = state
         store.saveMergeRequests(states.compactMapValues { $0.loading == .loaded ? $0.mergeRequests : nil })
 
+        let recheck = recheckMain.remove(project.id) != nil
+        guard await mainPasses(project, base: base, client: client, recheck: recheck) else { return }
+
         let force = forced.removeValue(forKey: project.id) ?? []
         var queue: [MergeRequest] = []
         for mr in mrs where mrTasks[mr.id] == nil && !(runs[mr.id]?.fix?.isActive ?? false) {
@@ -259,6 +278,52 @@ final class Workspace {
             guard !Task.isCancelled, !paused || force.contains(mr.id) else { continue }
             await runPipeline(mr, project, client: client)
         }
+    }
+
+    private func mainPasses(_ project: Project, base: String, client: GitLabClient, recheck: Bool) async -> Bool {
+        let commands = MainCheck.Commands(project)
+        let previous = mainChecks[project.id]
+        if let previous, previous.sha == base, previous.commands == commands {
+            if previous.phase == .passed { return true }
+            if previous.phase != .checking && !recheck { return false }
+        }
+        let git = git(for: project)
+        let effects =
+            makeEffects?(project, git, client) ?? LivePipelineEffects(git: git, gitlab: client, projectID: project.id)
+        let start = MainCheck(sha: base, commands: commands, lastPassed: previous?.lastPassed)
+        let recorder = mainRecorder(project, start: start)
+        do {
+            let result = try await MainPipeline(project: project, effects: effects).check(recorder)
+            setMain(result, project: project)
+            return result.phase == .passed
+        } catch {
+            setMain(previous, project: project)
+            if !(error is CancellationError) { states[project.id]?.error = MRPipeline.describe(error) }
+            return false
+        }
+    }
+
+    private func mainRecorder(_ project: Project, start: MainCheck) -> Recorder<MainCheck> {
+        let generation = (mainGenerations[project.id] ?? 0) + 1
+        mainGenerations[project.id] = generation
+        mainRevisions[project.id] = 0
+        return Recorder(start) { [weak self] check, revision in
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    guard let self, self.mainGenerations[project.id] == generation,
+                        revision > (self.mainRevisions[project.id] ?? 0)
+                    else { return }
+                    self.mainRevisions[project.id] = revision
+                    self.mainChecks[project.id] = check
+                }
+            }
+        }
+    }
+
+    private func setMain(_ check: MainCheck?, project: Project) {
+        mainGenerations[project.id] = (mainGenerations[project.id] ?? 0) + 1
+        mainChecks[project.id] = check
+        store.saveMainChecks(mainChecks)
     }
 
     private func runPipeline(_ mr: MergeRequest, _ project: Project, client: GitLabClient) async {
@@ -339,7 +404,8 @@ final class Workspace {
     }
 
     func canFix(_ mr: MergeRequest) -> Bool {
-        guard let project = project(for: mr), project.claude != .off, claude?.status == .ready, mrTasks[mr.id] == nil
+        guard let project = project(for: mr), project.claude != .off, claude?.status == .ready, mrTasks[mr.id] == nil,
+            !isWaiting(project)
         else { return false }
         let run = run(mr)
         guard Self.fixKind(run.status) != nil else { return false }
@@ -347,7 +413,9 @@ final class Workspace {
     }
 
     func shouldAutoFix(_ run: MRRun, project: Project) -> Bool {
-        guard project.claude == .inherit, claude?.status == .ready, run.fix == nil else { return false }
+        guard project.claude == .inherit, claude?.status == .ready, run.fix == nil, !isWaiting(project) else {
+            return false
+        }
         let settings = store.settings.claude
         switch Self.fixKind(run.status) {
         case .tests: return settings.onTests

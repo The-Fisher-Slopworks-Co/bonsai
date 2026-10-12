@@ -54,7 +54,7 @@ final class Scheduler {
     }
 
     func checkNow() {
-        workspace.checkAll()
+        workspace.checkAll(recheck: true)
         reschedule()
     }
 
