@@ -367,6 +367,14 @@ struct StatusIcon: View {
                 ProgressView().controlSize(size > 20 ? .regular : .small).tint(.purple)
             case .dots:
                 Image(systemName: "ellipsis.circle.fill").resizable().foregroundStyle(.white, .purple)
+            case .pause:
+                Image(systemName: "pause.circle").resizable().foregroundStyle(.tertiary)
+            case .star:
+                Circle().fill(.purple).overlay {
+                    Image(systemName: "sparkle").resizable().scaledToFit().padding(size * 0.22).foregroundStyle(.white)
+                }
+            case .brokenCross:
+                Image(systemName: "xmark.circle.fill").resizable().foregroundStyle(.white, .orange)
             }
         }
         .frame(width: size, height: size)
