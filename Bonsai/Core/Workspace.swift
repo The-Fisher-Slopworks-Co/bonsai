@@ -46,6 +46,7 @@ final class Workspace {
     private var again: Set<Int> = []
     private var forced: [Int: [String]] = [:]
     private var recheckMain: Set<Int> = []
+    private var mainTasks: [Int: Task<Void, Never>] = [:]
     private var mainGenerations: [Int: Int] = [:]
     private var mainRevisions: [Int: Int] = [:]
     private var mrTasks: [String: Task<Void, Never>] = [:]
@@ -60,6 +61,10 @@ final class Workspace {
         self.configuration = configuration
         runs = store.loadRuns()
         mainChecks = store.loadMainChecks()
+        for (id, check) in mainChecks where check.phase == .fixing {
+            mainChecks[id]?.phase = .stopped
+            mainChecks[id]?.proposal = nil
+        }
         for (id, run) in runs where !run.status.isFinal {
             runs[id]?.status = .unknown
         }
@@ -127,6 +132,7 @@ final class Workspace {
 
     func remove(_ project: Project) async {
         workers[project.id]?.cancel()
+        mainTasks[project.id]?.cancel()
         for mr in state(project).mergeRequests { mrTasks[mr.id]?.cancel() }
         await workers[project.id]?.value
         store.projects.removeAll { $0.id == project.id }
@@ -142,6 +148,7 @@ final class Workspace {
     func cancelAll() {
         for worker in workers.values { worker.cancel() }
         for task in mrTasks.values { task.cancel() }
+        for task in mainTasks.values { task.cancel() }
     }
 
     func checkAll(recheck: Bool = false) {
@@ -173,6 +180,8 @@ final class Workspace {
             if let worker = workers.values.first {
                 await worker.value
             } else if let task = mrTasks.values.first {
+                await task.value
+            } else if let task = mainTasks.values.first {
                 await task.value
             } else {
                 return
@@ -253,7 +262,7 @@ final class Workspace {
         store.saveMergeRequests(states.compactMapValues { $0.loading == .loaded ? $0.mergeRequests : nil })
 
         let recheck = recheckMain.remove(project.id) != nil
-        guard await mainPasses(project, base: base, client: client, recheck: recheck) else { return }
+        guard let checked = await mainPasses(project, base: base, client: client, recheck: recheck) else { return }
 
         let force = forced.removeValue(forKey: project.id) ?? []
         var queue: [MergeRequest] = []
@@ -276,30 +285,130 @@ final class Workspace {
         for mr in queue {
             let paused = store.projects.first { $0.id == project.id }?.paused ?? true
             guard !Task.isCancelled, !paused || force.contains(mr.id) else { continue }
-            await runPipeline(mr, project, client: client)
+            await runPipeline(mr, checked, client: client)
         }
     }
 
-    private func mainPasses(_ project: Project, base: String, client: GitLabClient, recheck: Bool) async -> Bool {
-        let commands = MainCheck.Commands(project)
+    private func mainPasses(_ project: Project, base: String, client: GitLabClient, recheck: Bool) async
+        -> Project?
+    {
+        var project = project
+        var commands = MainCheck.Commands(project)
         let previous = mainChecks[project.id]
         if let previous, previous.sha == base, previous.commands == commands {
-            if previous.phase == .passed { return true }
-            if previous.phase != .checking && !recheck { return false }
+            if previous.phase == .passed { return project }
+            if previous.phase != .checking && !recheck { return nil }
         }
+        if mainTasks[project.id] != nil || (previous?.phase == .ready && previous?.commands == commands) { return nil }
         let git = git(for: project)
-        let effects =
-            makeEffects?(project, git, client) ?? LivePipelineEffects(git: git, gitlab: client, projectID: project.id)
+        if commands.test.isEmpty {
+            let start = MainCheck(sha: base, commands: commands, lastPassed: previous?.lastPassed, pick: true)
+            if canFixMain(project) {
+                startMainFix(project, check: start)
+                return nil
+            }
+            guard let found = await detectCommands(project, git: git) else {
+                var missing = start
+                missing.phase = .missing
+                setMain(missing, project: project)
+                return nil
+            }
+            project.setup = found.setup
+            project.test = found.test
+            update(project)
+            commands = MainCheck.Commands(project)
+        }
         let start = MainCheck(sha: base, commands: commands, lastPassed: previous?.lastPassed)
         let recorder = mainRecorder(project, start: start)
         do {
-            let result = try await MainPipeline(project: project, effects: effects).check(recorder)
+            let result = try await MainPipeline(project: project, effects: mainEffects(project, client: client))
+                .check(recorder)
             setMain(result, project: project)
-            return result.phase == .passed
+            return result.phase == .passed ? project : nil
         } catch {
             setMain(previous, project: project)
             if !(error is CancellationError) { states[project.id]?.error = MRPipeline.describe(error) }
-            return false
+            return nil
+        }
+    }
+
+    private func mainEffects(_ project: Project, client: GitLabClient) -> any PipelineEffects {
+        let git = git(for: project)
+        return makeEffects?(project, git, client)
+            ?? LivePipelineEffects(git: git, gitlab: client, projectID: project.id)
+    }
+
+    private func detectCommands(_ project: Project, git: GitRunner) async -> DetectedCommands? {
+        let ref = "origin/\(project.targetBranch)"
+        guard let listing = try? await git.checked(["ls-tree", "--name-only", ref]) else { return nil }
+        let files = listing.split(separator: "\n").map(String.init)
+        return try? await CommandDetector.detect(files: files) { path in
+            try? await git.checked(["show", "\(ref):\(path)"])
+        }
+    }
+
+    func canFixMain(_ project: Project) -> Bool {
+        project.claude != .off && claude?.status == .ready && mainTasks[project.id] == nil
+    }
+
+    func fixMain(_ project: Project) {
+        guard let check = mainChecks[project.id], canFixMain(project) else { return }
+        switch check.phase {
+        case .failed, .missing, .rejected, .stopped: startMainFix(project, check: check)
+        default: return
+        }
+    }
+
+    func stopMain(_ project: Project) {
+        mainTasks[project.id]?.cancel()
+    }
+
+    func rejectMain(_ project: Project) {
+        guard var check = mainChecks[project.id], check.phase == .ready else { return }
+        check.phase = .rejected
+        check.proposal = nil
+        setMain(check, project: project)
+    }
+
+    func applyMain(_ project: Project) {
+        guard var check = mainChecks[project.id], check.phase == .ready, let commands = check.proposal?.commands
+        else { return }
+        var updated = project
+        updated.setup = commands.setup
+        updated.test = commands.test
+        update(updated)
+        check.phase = .passed
+        check.commands = commands
+        check.lastPassed = commands
+        check.pick = false
+        check.proposal = nil
+        setMain(check, project: updated)
+        self.check(updated)
+    }
+
+    private func startMainFix(_ project: Project, check: MainCheck) {
+        guard let client = client(), let path = claude?.path else { return }
+        let failure = check.failedStage.map { check[$0].log.map(\.text).joined(separator: "\n") } ?? ""
+        let prompt = CommandPrompt(
+            pick: check.pick, branch: project.targetBranch, setup: check.commands.setup, test: check.commands.test,
+            failureLog: failure, rules: store.settings.claude.rules ?? localized("settings.rulesDefault"),
+            projectRules: project.rules,
+            language: FixPrompt.languageName(Bundle.main.preferredLocalizations.first ?? "en"))
+        let runner = makeClaudeRunner()
+        let directory = store.cloneDirectory(for: project)
+        let claude: MainPipeline.Claude = { text, resume, onEvent in
+            try await runner.run(
+                ClaudeRequest(
+                    executable: path, directory: directory, prompt: text, allowedTools: CommandPrompt.allowedTools,
+                    schema: CommandPrompt.schema, resume: resume), onEvent: onEvent)
+        }
+        let pipeline = MainPipeline(project: project, effects: mainEffects(project, client: client))
+        let attempts = store.settings.claude.attempts
+        let recorder = mainRecorder(project, start: check)
+        mainTasks[project.id] = Task {
+            let result = await pipeline.fix(prompt, attempts: attempts, claude: claude, recorder)
+            setMain(result, project: project)
+            mainTasks[project.id] = nil
         }
     }
 
