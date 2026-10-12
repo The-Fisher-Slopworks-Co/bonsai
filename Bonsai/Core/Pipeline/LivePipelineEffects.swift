@@ -36,6 +36,10 @@ struct LivePipelineEffects: PipelineEffects {
         try await git.checked(["clean", "-fdq"])
     }
 
+    func copy(_ paths: [String], from localCopy: String, log: @escaping LogSink) async throws {
+        try await git.copy(paths, from: localCopy, log: log)
+    }
+
     private func abortStaleRebase() async throws {
         if FileManager.default.fileExists(atPath: git.directory.appendingPathComponent(".git/rebase-merge").path)
             || FileManager.default.fileExists(atPath: git.directory.appendingPathComponent(".git/rebase-apply").path)

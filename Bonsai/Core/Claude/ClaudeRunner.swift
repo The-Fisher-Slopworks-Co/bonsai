@@ -10,6 +10,7 @@ struct ClaudeRequest: Sendable, Equatable {
     var allowedTools: [String]
     var schema: String
     var resume: String?
+    var directories: [String] = []
 }
 
 struct ClaudeError: Error, Equatable {
@@ -34,6 +35,16 @@ struct LiveClaudeRunner: ClaudeRunning {
             "--json-schema", request.schema,
         ]
         if let resume = request.resume { args += ["--resume", resume] }
+        for directory in request.directories {
+            let real = realpath(directory, nil).map { pointer in
+                defer { free(pointer) }
+                return String(cString: pointer)
+            }
+            let paths = ([directory] + (real.map { [$0] } ?? [])).map { path in
+                path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
+            }
+            args += ["--add-dir", directory, "--disallowedTools"] + Set(paths).sorted().map { "Edit(/\($0)/**)" }
+        }
         return args + extraArguments
     }
 

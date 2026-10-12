@@ -196,6 +196,19 @@ struct MRPipeline: Sendable {
             }
             return .finished
         case .ok:
+            if project.copiesLocally {
+                do {
+                    try await effects.copy(project.copiedPaths, from: project.localCopy, log: rebaseLog)
+                } catch let error as LocalCopyError {
+                    rebaseLog(LogLine(text: error.localizedDescription, kind: .error))
+                    finish(.rebase, .failed, recorder, now: now)
+                    recorder.update {
+                        $0.status = .unavailable
+                        $0.finishedAt = now()
+                    }
+                    return .finished
+                }
+            }
             finish(.rebase, .done, recorder, now: now)
         }
 

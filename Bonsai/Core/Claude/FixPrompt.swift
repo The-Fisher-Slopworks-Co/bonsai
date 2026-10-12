@@ -12,6 +12,8 @@ struct FixPrompt: Sendable {
     var rules: String
     var projectRules: String
     var environment: [String] = []
+    var localCopy: String?
+    var copied: [String] = []
     var failureLog: String = ""
     var job: String?
     var conflictFiles: [String] = []
@@ -82,6 +84,7 @@ struct FixPrompt: Sendable {
                 Stage each resolved file with `git add`. Do not run `git rebase --continue` or `git rebase --abort`.
                 """)
         }
+        if let section = CommandPrompt.localCopy(localCopy, copied: copied) { parts.append(section) }
         parts.append("Rules:\n" + rules.trimmingCharacters(in: .whitespacesAndNewlines))
         let project = projectRules.trimmingCharacters(in: .whitespacesAndNewlines)
         if !project.isEmpty { parts.append("Project rules:\n" + project) }

@@ -245,6 +245,11 @@ S = {
     "ps.delete": ("Remove", "Убрать"),
     "ps.alertTitle": ("Remove “%@” from Bonsai?", "Убрать «%@» из Bonsai?"),
     "ps.alertBody": ("The clone will be deleted. MRs in GitLab won’t change.", "Клон будет удалён. MR в GitLab не изменятся."),
+    "ps.localCopy": ("Local copy", "Локальная копия"),
+    "ps.localCopyChoose": ("Choose…", "Выбрать…"),
+    "ps.localCopyHint": ("Your own checkout. Bonsai only reads it.", "Ваш рабочий клон. Bonsai только читает его."),
+    "ps.copy": ("Copy", "Копировать"),
+    "ps.copyHint": ("From the local copy before setup, outside git.", "Из локальной копии перед подготовкой, мимо git."),
     "localCopy.missing": ("“%@” isn’t in the local copy.", "В локальной копии нет «%@»."),
 
     "fix.claudeFixing": ("Claude is fixing…", "Claude исправляет…"),
