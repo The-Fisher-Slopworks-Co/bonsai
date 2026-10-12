@@ -60,6 +60,15 @@ struct ClaudeStreamTests {
             return
         }
         #expect(result.notes == ["a.ts": "kept both"])
+        let commands = parser.parse(
+            #"{"type":"result","subtype":"success","is_error":false,"session_id":"s","structured_output":{"summary":"S","setup":"make deps","test":"make test"}}"#
+        )
+        guard case .finished(let picked)? = commands.first else {
+            Issue.record("no result")
+            return
+        }
+        #expect(picked.setup == "make deps")
+        #expect(picked.test == "make test")
     }
 
     @Test func ignoresGarbageAndSubagents() {

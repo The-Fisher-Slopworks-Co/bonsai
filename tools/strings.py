@@ -64,6 +64,11 @@ S = {
     "mr.stage.checkout": ("Checkout", "Checkout"),
     "main.sub.ciOk": ("main pipeline passed", "pipeline main прошёл"),
     "main.sub.ciFail": ("main pipeline failed", "pipeline main упал"),
+    "main.sub.commandsOnly": ("commands only", "только команды"),
+    "main.sub.both": ("Setup and Tests", "подготовка и тесты"),
+    "main.sub.setup": ("Setup", "подготовка"),
+    "main.sub.test": ("Tests", "тесты"),
+    "mr.stage.pick": ("Commands", "Подбор команд"),
     "mr.sub.onto": ("onto %@", "на %@"),
     "mr.sub.pipeline": ("pipeline", "pipeline"),
     "mr.notNeeded": ("not needed, branch is up to date", "не нужен, ветка актуальна"),
@@ -285,6 +290,10 @@ P = {
     "menu.fresh": {
         "en": {"one": "%lld more MR up to date", "other": "%lld more MRs up to date"},
         "ru": {"one": "Ещё %lld MR актуален", "few": "Ещё %lld MR актуальны", "many": "Ещё %lld MR актуальны", "other": "Ещё %lld MR актуальны"},
+    },
+    "main.sub.lines": {
+        "en": {"one": "+%lld line", "other": "+%lld lines"},
+        "ru": {"one": "+%lld строка", "few": "+%lld строки", "many": "+%lld строк", "other": "+%lld строки"},
     },
     "mr.count": {
         "en": {"one": "%lld MR", "other": "%lld MRs"},
