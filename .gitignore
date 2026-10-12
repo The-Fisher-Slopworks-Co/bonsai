@@ -10,3 +10,4 @@ xcuserdata/
 tests/gitlab/.env
 tests/gitlab/data/
 __pycache__/
+CLAUDE.local.md
