@@ -145,4 +145,33 @@ struct WorkspaceMainTests {
         #expect(f.workspace.mainCheck(f.project)?.phase == .stopped)
         #expect(f.workspace.canFixMain(project(f)))
     }
+
+    @Test func failureReproducedOnMainIsNotReportedForTheMR() async throws {
+        let f = try await WorkspaceTests().fixture()
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
+        let main = try await f.repo.sh("git --git-dir=\(f.repo.origin.path) rev-parse main", in: f.repo.root)
+        f.gitlab.statusBySHA[main] = "success"
+        f.gitlab.pipelineStatus = "failed"
+        var reported: [MRStatus] = []
+        var blocked: [MainCheck.Phase] = []
+        f.workspace.onStatusChange = { reported.append($0.new) }
+        f.workspace.onMainChange = { blocked.append($0.new.phase) }
+        f.workspace.add(f.project)
+        await f.workspace.waitUntilIdle()
+        for _ in 0..<200 where !reported.contains(.ciFailed(job: "lint")) {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        #expect(reported.contains(.ciFailed(job: "lint")))
+        #expect(blocked == [.checking, .passed])
+
+        reported = []
+        f.gitlab.statusBySHA[main] = "failed"
+        f.workspace.start(try #require(f.workspace.state(f.project).mergeRequests.first))
+        for _ in 0..<200 where blocked.last != .broken { try await Task.sleep(for: .milliseconds(25)) }
+        #expect(blocked.last == .broken)
+        #expect(!reported.contains(.ciFailed(job: "lint")))
+    }
 }

@@ -63,6 +63,42 @@ struct NotificationRulesTests {
     }
 }
 
+struct MainNotificationTests {
+    func change(_ old: MainCheck.Phase?, _ new: MainCheck.Phase, failed: StageKind = .test, count: Int = 5)
+        -> Workspace.MainChange
+    {
+        var check = MainCheck(phase: new, sha: "s", commands: MainCheck.Commands(PipelineTests.project))
+        check.stages = [Stage(kind: failed, state: .failed)]
+        return Workspace.MainChange(project: PipelineTests.project, old: old, new: check, mergeRequests: count)
+    }
+
+    @Test func onceWhenMainStartsBlocking() {
+        let settings = NotificationSettings()
+        #expect(
+            NotificationRules.mainNote(for: change(.checking, .failed), settings: settings)
+                == localized("main.bn.failTest", "main"))
+        #expect(
+            NotificationRules.mainNote(for: change(.checking, .broken, failed: .setup), settings: settings)
+                == localized("main.bn.failSetup", "main"))
+        #expect(NotificationRules.mainNote(for: change(.failed, .broken), settings: settings) == nil)
+        #expect(NotificationRules.mainNote(for: change(.checking, .passed), settings: settings) == nil)
+        #expect(NotificationRules.mainNote(for: change(.fixing, .ready), settings: settings) == nil)
+        var off = settings
+        off.needsMe = false
+        #expect(NotificationRules.mainNote(for: change(nil, .failed), settings: off) == nil)
+    }
+
+    @Test func bodyCountsWaitingMergeRequests() throws {
+        #expect(
+            NotificationRules.mainBody(for: change(nil, .failed)) == "project-main · "
+                + localized("main.notifyWaiting", 5))
+        #expect(NotificationRules.mainBody(for: change(nil, .failed, count: 0)) == "project-main")
+        let path = try #require(Bundle.main.path(forResource: "ru", ofType: "lproj"))
+        let ru = try #require(Bundle(path: path))
+        #expect(localized("main.notifyWaiting", bundle: ru, [5]) == "5 MR ждут")
+    }
+}
+
 struct MenuBarModelTests {
     func mr(_ iid: Int) -> MergeRequest {
         var mr = PipelineTests.mr
@@ -86,12 +122,31 @@ struct MenuBarModelTests {
             ],
             isChecking: false, lastCheck: Date(), pausedUntil: nil)
         #expect(model.sections.map(\.title) == [localized("menu.inProgress"), localized("menu.attention")])
-        #expect(model.sections[0].items.map(\.iid) == [1])
-        #expect(model.sections[1].items.map(\.iid) == [2, 5])
+        #expect(model.sections[0].items.map(\.idText) == ["!1"])
+        #expect(model.sections[1].items.map(\.idText) == ["!2", "!5"])
         #expect(model.freshCount == 2)
         #expect(model.hasProblems)
         #expect(model.isWorking)
         #expect(model.headerText == localized("menu.checkedNow"))
+    }
+
+    @Test func blockedProjectIsOneRow() {
+        var check = MainCheck(phase: .failed, sha: "s", commands: MainCheck.Commands(PipelineTests.project))
+        check.stages = [Stage(kind: .test, state: .failed)]
+        var other = mr(7)
+        other.projectID = 2
+        let model = MenuBarModel(
+            items: [(mr(1), run(.testsFailed)), (mr(2), run(.upToDate(pushed: true))), (other, run(.testsFailed))],
+            mains: [MenuBarModel.Main(project: PipelineTests.project, check: check, mergeRequests: 2)],
+            waiting: [PipelineTests.project.id], isChecking: false, lastCheck: nil, pausedUntil: nil)
+        #expect(model.sections.map(\.title) == [localized("menu.attention")])
+        let rows = model.sections[0].items
+        #expect(rows.map(\.title) == ["project-main", "MR 7"])
+        #expect(rows[0].idText == localized("mr.count", 2))
+        #expect(rows[0].status == localized("main.bn.failTest", "main"))
+        #expect(rows[0].mrID == MainPresentation.rowID)
+        #expect(model.freshCount == 0)
+        #expect(model.hasProblems)
     }
 
     @Test func calmMenu() {

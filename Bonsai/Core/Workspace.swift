@@ -27,11 +27,19 @@ final class Workspace {
         var newFix: ClaudeFix.Phase? = nil
     }
 
+    struct MainChange {
+        var project: Project
+        var old: MainCheck.Phase?
+        var new: MainCheck
+        var mergeRequests: Int
+    }
+
     let store: Store
     private let configuration: @Sendable () -> URLSessionConfiguration
     var makeEffects: ((Project, GitRunner, GitLabClient) -> any PipelineEffects)?
     var pipelineConfig = MRPipeline.Config()
     var onStatusChange: ((StatusChange) -> Void)?
+    var onMainChange: ((MainChange) -> Void)?
 
     private(set) var states: [Int: ProjectState] = [:]
     private(set) var runs: [String: MRRun]
@@ -49,6 +57,8 @@ final class Workspace {
     private var mainTasks: [Int: Task<Void, Never>] = [:]
     private var mainGenerations: [Int: Int] = [:]
     private var mainRevisions: [Int: Int] = [:]
+    private var pipelineRuns: Set<String> = []
+    private var heldChanges: [String: StatusChange] = [:]
     private var mrTasks: [String: Task<Void, Never>] = [:]
     private var stopped: Set<String> = []
     private var behindCounts: [String: Int] = [:]
@@ -211,6 +221,7 @@ final class Workspace {
         let pipeline = makePipeline(mr, project, client: client)
         let recorder = recorder(for: mr, project: project, start: current)
         let pushed = current.pushedSHA != nil
+        pipelineRuns.insert(mr.id)
         mrTasks[mr.id] = Task {
             do {
                 try await client.retryPipeline(project: project.id, pipeline: pipelineID)
@@ -423,7 +434,7 @@ final class Workspace {
                         revision > (self.mainRevisions[project.id] ?? 0)
                     else { return }
                     self.mainRevisions[project.id] = revision
-                    self.mainChecks[project.id] = check
+                    self.storeMain(check, project: project)
                 }
             }
         }
@@ -431,8 +442,18 @@ final class Workspace {
 
     private func setMain(_ check: MainCheck?, project: Project) {
         mainGenerations[project.id] = (mainGenerations[project.id] ?? 0) + 1
-        mainChecks[project.id] = check
+        storeMain(check, project: project)
         store.saveMainChecks(mainChecks)
+    }
+
+    private func storeMain(_ check: MainCheck?, project: Project) {
+        let old = mainChecks[project.id]?.phase
+        mainChecks[project.id] = check
+        if let check, check.phase != old {
+            onMainChange?(
+                MainChange(
+                    project: project, old: old, new: check, mergeRequests: state(project).mergeRequests.count))
+        }
     }
 
     private func runPipeline(_ mr: MergeRequest, _ project: Project, client: GitLabClient) async {
@@ -440,6 +461,7 @@ final class Workspace {
         let recorder = recorder(for: mr, project: project, start: run(mr))
         let localDone = Signal()
         stopped.remove(mr.id)
+        pipelineRuns.insert(mr.id)
         mrTasks[mr.id] = Task {
             _ = await pipeline.execute(recorder, onLocalDone: { localDone.fire() })
             finish(mr, project, recorder)
@@ -456,24 +478,30 @@ final class Workspace {
         }
         mrTasks[mr.id] = nil
         if final.status == .testsFailed && !mainVerified(at: final.baseSHA, project: project) {
+            pipelineRuns.remove(mr.id)
+            heldChanges[mr.id] = nil
             set(MRRun(), mr: mr, project: project)
             store.saveRuns(runs)
             check(project)
             return
         }
         set(final, mr: mr, project: project)
+        pipelineRuns.remove(mr.id)
+        let held = heldChanges.removeValue(forKey: mr.id)
         store.saveRuns(runs)
         if case .ciFailed(let job) = final.status, let base = final.baseSHA, let client = client() {
             Task {
                 if let pipeline = await mainFailure(job: job, sha: base, project: project, client: client) {
                     markMainBroken(project, sha: base, pipeline: pipeline, job: job)
-                } else if shouldAutoFix(final, project: project) {
-                    startFix(mr)
+                    return
                 }
+                if let held { onStatusChange?(held) }
+                if shouldAutoFix(final, project: project) { startFix(mr) }
             }
-        } else if shouldAutoFix(final, project: project) {
-            startFix(mr)
+            return
         }
+        if let held { onStatusChange?(held) }
+        if shouldAutoFix(final, project: project) { startFix(mr) }
     }
 
     private func mainVerified(at sha: String?, project: Project) -> Bool {
@@ -542,10 +570,18 @@ final class Workspace {
         let old = runs[mr.id]?.status ?? .unknown
         let oldFix = runs[mr.id]?.fix?.phase
         runs[mr.id] = run
-        if old != run.status || oldFix != run.fix?.phase {
-            onStatusChange?(
-                StatusChange(
-                    mr: mr, project: project, old: old, new: run.status, oldFix: oldFix, newFix: run.fix?.phase))
+        guard old != run.status || oldFix != run.fix?.phase else { return }
+        let change = StatusChange(
+            mr: mr, project: project, old: old, new: run.status, oldFix: oldFix, newFix: run.fix?.phase)
+        if pipelineRuns.contains(mr.id) && Self.fixKind(run.status) != nil {
+            heldChanges[mr.id] =
+                heldChanges[mr.id].map { held in
+                    var merged = change
+                    merged.old = held.old
+                    return merged
+                } ?? change
+        } else {
+            onStatusChange?(change)
         }
     }
 

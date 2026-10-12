@@ -30,6 +30,7 @@ final class AppModel {
     @ObservationIgnored var openWindow: OpenWindowAction?
     @ObservationIgnored var openSettings: OpenSettingsAction?
     @ObservationIgnored var onStatusChange: [(Workspace.StatusChange) -> Void] = []
+    @ObservationIgnored var onMainChange: [(Workspace.MainChange) -> Void] = []
     private var started = false
 
     init(store: Store = Store()) {
@@ -38,6 +39,9 @@ final class AppModel {
         scheduler = Scheduler(workspace: workspace)
         workspace.onStatusChange = { [weak self] change in
             for handler in self?.onStatusChange ?? [] { handler(change) }
+        }
+        workspace.onMainChange = { [weak self] change in
+            for handler in self?.onMainChange ?? [] { handler(change) }
         }
         workspace.openTerminal = { url in NSWorkspace.shared.open(url) }
     }

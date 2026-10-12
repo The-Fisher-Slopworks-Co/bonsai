@@ -43,6 +43,20 @@ enum NotificationRules {
         return Note(title: key, mrID: change.mr.id, projectID: change.project.id)
     }
 
+    static func mainNote(for change: Workspace.MainChange, settings: NotificationSettings) -> String? {
+        let blocking: Set<MainCheck.Phase> = [.failed, .broken, .missing]
+        guard settings.needsMe, blocking.contains(change.new.phase) else { return nil }
+        if let old = change.old, blocking.contains(old) { return nil }
+        if change.new.pick { return localized("main.st.noCmds") }
+        let key = change.new.failedStage == .setup ? "main.bn.failSetup" : "main.bn.failTest"
+        return localized(key, change.project.targetBranch)
+    }
+
+    static func mainBody(for change: Workspace.MainChange) -> String {
+        guard change.mergeRequests > 0 else { return change.project.name }
+        return change.project.name + " · " + localized("main.notifyWaiting", change.mergeRequests)
+    }
+
     private static func isRunning(_ status: MRStatus) -> Bool {
         if case .running = status { true } else { false }
     }

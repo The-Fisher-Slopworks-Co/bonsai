@@ -321,6 +321,10 @@ P = {
         "en": {"one": "%lld more MR up to date", "other": "%lld more MRs up to date"},
         "ru": {"one": "Ещё %lld MR актуален", "few": "Ещё %lld MR актуальны", "many": "Ещё %lld MR актуальны", "other": "Ещё %lld MR актуальны"},
     },
+    "main.notifyWaiting": {
+        "en": {"one": "%lld MR waiting", "other": "%lld MRs waiting"},
+        "ru": {"one": "%lld MR ждут", "few": "%lld MR ждут", "many": "%lld MR ждут", "other": "%lld MR ждут"},
+    },
     "main.sub.lines": {
         "en": {"one": "+%lld line", "other": "+%lld lines"},
         "ru": {"one": "+%lld строка", "few": "+%lld строки", "many": "+%lld строк", "other": "+%lld строки"},

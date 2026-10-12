@@ -16,6 +16,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         center.delegate = self
         center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
         app.onStatusChange.append { [weak self] change in self?.handle(change) }
+        app.onMainChange.append { [weak self] change in self?.handle(change) }
         observeConnection()
     }
 
@@ -28,6 +29,13 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         post(
             title: localized(note.title), body: "\(change.mr.title) · \(change.project.name)",
             info: ["project": note.projectID, "mr": note.mrID], id: "\(note.mrID)-\(note.title)")
+    }
+
+    func handle(_ change: Workspace.MainChange) {
+        guard let title = NotificationRules.mainNote(for: change, settings: settings), !quiet else { return }
+        post(
+            title: title, body: NotificationRules.mainBody(for: change),
+            info: ["project": change.project.id, "mr": MainPresentation.rowID], id: "\(change.project.id)-main")
     }
 
     private func observeConnection() {
