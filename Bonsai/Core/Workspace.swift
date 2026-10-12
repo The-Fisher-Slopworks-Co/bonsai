@@ -345,10 +345,56 @@ final class Workspace {
             final.status = .behind(commits: behindCounts[mr.id] ?? 0)
             final.headSHA = nil
         }
-        set(final, mr: mr, project: project)
         mrTasks[mr.id] = nil
+        if final.status == .testsFailed && !mainVerified(at: final.baseSHA, project: project) {
+            set(MRRun(), mr: mr, project: project)
+            store.saveRuns(runs)
+            check(project)
+            return
+        }
+        set(final, mr: mr, project: project)
         store.saveRuns(runs)
-        if shouldAutoFix(final, project: project) { startFix(mr) }
+        if case .ciFailed(let job) = final.status, let base = final.baseSHA, let client = client() {
+            Task {
+                if let pipeline = await mainFailure(job: job, sha: base, project: project, client: client) {
+                    markMainBroken(project, sha: base, pipeline: pipeline, job: job)
+                } else if shouldAutoFix(final, project: project) {
+                    startFix(mr)
+                }
+            }
+        } else if shouldAutoFix(final, project: project) {
+            startFix(mr)
+        }
+    }
+
+    private func mainVerified(at sha: String?, project: Project) -> Bool {
+        guard let check = mainChecks[project.id] else { return false }
+        return check.phase == .passed && check.sha == sha && check.commands == MainCheck.Commands(project)
+    }
+
+    private func mainFailure(job: String, sha: String, project: Project, client: GitLabClient) async -> Int? {
+        guard let pipeline = try? await client.latestPipeline(project: project.id, sha: sha),
+            pipeline.ciStatus == .failed,
+            let jobs = try? await client.failedJobs(project: project.id, pipeline: pipeline.id),
+            jobs.contains(where: { $0.name == job })
+        else { return nil }
+        return pipeline.id
+    }
+
+    private func markMainBroken(_ project: Project, sha: String, pipeline: Int, job: String) {
+        var check = mainChecks[project.id] ?? MainCheck(sha: sha, commands: MainCheck.Commands(project))
+        check.sha = sha
+        check.phase = .broken
+        check.stages = [
+            Stage(
+                kind: .ci, state: .failed, caption: .mainCiFailed,
+                log: [
+                    LogLine(text: "pipeline #\(pipeline) · \(project.targetBranch) · \(sha.prefix(7))", kind: .output),
+                    LogLine(text: "\(job): failed", kind: .error),
+                ])
+        ]
+        check.finishedAt = Date()
+        setMain(check, project: project)
     }
 
     private func makePipeline(_ mr: MergeRequest, _ project: Project, client: GitLabClient) -> MRPipeline {

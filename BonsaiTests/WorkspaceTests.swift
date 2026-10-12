@@ -23,6 +23,7 @@ struct WorkspaceTests {
         let lock = NSLock()
         var mrs: [String] = []
         var pipelineStatus = "success"
+        var statusBySHA: [String: String] = [:]
         func handler() -> MockURLProtocol.Handler {
             { [self] request in
                 let path = request.url!.path()
@@ -35,7 +36,10 @@ struct WorkspaceTests {
                             $0.name == "sha"
                         }?.value ?? ""
                     return (
-                        200, json(#"[{"id": 5, "status": "\#(lock.withLock { pipelineStatus })", "sha": "\#(sha)"}]"#)
+                        200,
+                        json(
+                            #"[{"id": 5, "status": "\#(lock.withLock { statusBySHA[sha] ?? pipelineStatus })", "sha": "\#(sha)"}]"#
+                        )
                     )
                 }
                 if path.hasSuffix("/retry") { return (201, json(#"{"id": 5, "status": "pending", "sha": ""}"#)) }
@@ -192,11 +196,14 @@ struct WorkspaceTests {
             f.store.signOut()
             f.repo.remove()
         }
+        let main = try await f.repo.sh("git --git-dir=\(f.repo.origin.path) rev-parse main", in: f.repo.root)
+        f.gitlab.statusBySHA[main] = "success"
         f.gitlab.pipelineStatus = "failed"
         f.workspace.add(f.project)
         await f.workspace.waitUntilIdle()
         let mr = f.workspace.state(f.project).mergeRequests[0]
         #expect(f.workspace.run(mr).status == .ciFailed(job: "lint"))
+        #expect(!f.workspace.isWaiting(f.project))
         #expect(MRPresentation(f.workspace.run(mr)).actions == [.rerunCI, .fix])
 
         f.gitlab.pipelineStatus = "success"
@@ -279,6 +286,30 @@ struct WorkspaceTests {
         f.workspace.check(f.project)
         await f.workspace.waitUntilIdle()
         #expect(f.workspace.mainCheck(f.project)?.phase == .passed)
+    }
+
+    @Test func sameJobFailingOnMainBlamesMain() async throws {
+        let f = try await fixture()
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
+        let main = try await f.repo.sh("git --git-dir=\(f.repo.origin.path) rev-parse main", in: f.repo.root)
+        f.gitlab.statusBySHA[main] = "success"
+        f.gitlab.pipelineStatus = "failed"
+        f.workspace.add(f.project)
+        await f.workspace.waitUntilIdle()
+        f.gitlab.statusBySHA[main] = "failed"
+        let mr = f.workspace.state(f.project).mergeRequests[0]
+        f.workspace.start(mr)
+        for _ in 0..<200 where f.workspace.mainCheck(f.project)?.phase != .broken {
+            try await Task.sleep(for: .milliseconds(25))
+        }
+        let check = try #require(f.workspace.mainCheck(f.project))
+        #expect(check.phase == .broken)
+        #expect(check.sha == main)
+        #expect(check[.ci].log.map(\.text) == ["pipeline #5 · main · \(main.prefix(7))", "lint: failed"])
+        #expect(f.workspace.isWaiting(f.project))
     }
 
     @Test func filtersDraftsLabelsAndOtherTargets() async throws {
