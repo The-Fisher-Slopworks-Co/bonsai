@@ -1,57 +1,58 @@
-# Bonsai — правила для Claude Code
+# Bonsai — rules for Claude Code
 
-Нативное macOS-приложение на Swift. Макеты — канвас Claude Design «Bonsai» артборды и заметки по дизайну).
+A native macOS app in Swift.
 
-## Стек
+## Stack
 
-- Swift 6, SwiftUI для всех окон и листов; AppKit только там, где SwiftUI не умеет (NSStatusItem для строки меню, NSAlert при необходимости, Terminal через AppleScript).
-- Минимальная macOS 26, Xcode 27.
-- Проект описан в `project.yml` (XcodeGen); `.xcodeproj` генерируется и не коммитится. Если XcodeGen недоступен, создай `.xcodeproj` один раз и коммить его.
-- Зависимости: только Swift Package Manager, и только если без них действительно нельзя. GitLab API, git и Keychain делаем сами на URLSession, Process и Security.framework.
-- Тесты: Swift Testing (`import Testing`), таргет `BonsaiTests`. Сеть в тестах мокается через `URLProtocol`, git через временные репозитории в `/tmp`.
+- Swift 6, SwiftUI for all windows and sheets; AppKit only where SwiftUI can't (NSStatusItem for the menu bar, NSAlert when needed, Terminal via AppleScript).
+- Minimum macOS 26, Xcode 27.
+- The project is described in `project.yml` (XcodeGen); `.xcodeproj` is generated and not committed. If XcodeGen is unavailable, create the `.xcodeproj` once and commit it.
+- Dependencies: Swift Package Manager only, and only when there is truly no way around them. GitLab API, git and Keychain are done in-house with URLSession, Process and Security.framework.
+- Tests: Swift Testing (`import Testing`), target `BonsaiTests`. Network in tests is mocked via `URLProtocol`, git via temporary repositories in `/tmp`.
 
-## Структура
+## Structure
 
 ```
 Bonsai/
-  App/            точка входа, окна, строка меню
-  Features/       по экранам: Connect, Projects, MergeRequests, Settings, ProjectSettings, ClaudeFix
-  Core/           GitLabClient, GitRunner, Pipeline (стейт-машина MR), ClaudeRunner, Scheduler, Store
+  App/            entry point, windows, menu bar
+  Features/       per screen: Connect, Projects, MergeRequests, Settings, ProjectSettings, ClaudeFix
+  Core/           GitLabClient, GitRunner, Pipeline (MR state machine), ClaudeRunner, Scheduler, Store
   Resources/      Localizable.xcstrings (ru, en), Assets
 BonsaiTests/
 ```
 
-Логика пайплайна (`Core/Pipeline`) не знает про UI и полностью покрыта тестами. UI не содержит бизнес-логики.
+The pipeline logic (`Core/Pipeline`) knows nothing about the UI and is fully covered by tests. The UI holds no business logic.
 
-## Как работать
+## How to work
 
-- Перед каждым коммитом `tools/check.sh` проходит.
-- Стиль кода — swift-format (`.swift-format`), неиспользуемый код ловит Periphery (`.periphery.yml`), предупреждения компилятора — ошибки.
-- SPDX-заголовок в каждом новом файле, где возможен комментарий, иначе `tools/check.sh reuse` падает. `REUSE.toml` покрывает только форматы без комментариев (JSON, Markdown, PNG, `.xcstrings`, `.swift-format`) и `Info.plist`, который перезаписывает XcodeGen. В `#`-файлах те же две строки с `#`:
+- `tools/check.sh` passes before every commit.
+- Code style is swift-format (`.swift-format`), unused code is caught by Periphery (`.periphery.yml`), compiler warnings are errors.
+- An SPDX header in every new file that can hold a comment, otherwise `tools/check.sh reuse` fails. `REUSE.toml` covers only comment-less formats (JSON, Markdown, PNG, `.xcstrings`, `.swift-format`) and `Info.plist`, which XcodeGen overwrites. `#`-comment files get the same two lines with `#`:
   ```swift
   // SPDX-License-Identifier: AGPL-3.0-or-later
   // Copyright (C) 2026 The Fisher Slopworks Co
   ```
-- Тексты интерфейса бери дословно из `BZ_STRINGS` в макетах, оба языка. Не придумывай новые формулировки, не добавляй подсказки и пояснения, которых нет в макетах.
-- Следуй HIG: системные шрифты и цвета, стандартные контролы, стандартные размеры листов и алертов. Никаких кастомных «красивостей» сверх макетов.
+- Take UI texts verbatim from `BZ_STRINGS` in the mockups, both languages. Don't invent new wording, don't add hints or explanations that aren't in the mockups.
+- Follow the HIG: system fonts and colors, standard controls, standard sheet and alert sizes. No custom embellishments beyond the mockups.
 
-## Запреты
+## Prohibitions
 
-- Не менять тесты, чтобы они прошли. Падает тест — чини код.
-- Не отключать проверку TLS глобально, не хранить токен нигде, кроме Keychain, не логировать токен.
-- Не делать `git push` в чужие репозитории. Живой GitLab для проверки только локальный, в Docker (`tests/gitlab/`). К рабочему GitLab пользователя не подключаться.
-- Не добавлять TODO, закомментированный код, пустые заглушки «на потом». Нет функции — нет кнопки.
-- Не трогать файлы вне папки проекта, кроме установки инструментов через Homebrew и Docker-томов.
+- Don't change tests to make them pass. A test fails — fix the code.
+- Don't disable TLS verification globally, don't store the token anywhere but the Keychain, don't log the token.
+- Don't `git push` to other people's repositories. A live GitLab for verification is local only, in Docker (`tests/gitlab/`). Don't connect to the user's work GitLab.
+- Don't add TODOs, commented-out code, or empty "later" stubs. No feature — no button.
+- Don't touch files outside the project folder, except installing tools via Homebrew and Docker volumes.
 
-## Команды
+## Commands
 
-- Гейт: `tools/check.sh` = format + unused + reuse + test; один шаг: `tools/check.sh format`.
-- Pre-commit: `lefthook install` ставит хук с тем же гейтом; `LEFTHOOK=0 git commit` пропускает его один раз.
-- Инструменты: `brew install xcodegen periphery lefthook`, `uv` для `reuse`.
-- Форматирование: `xcrun swift-format format -i --recursive Bonsai BonsaiTests tools/icon`.
-- Сборка: `xcodegen generate && xcodebuild -scheme Bonsai -configuration Debug build | tail -40`
-- Тесты: `tools/test.sh`
-- Запуск для ручной проверки: `open build.noindex/Debug/Bonsai.app` (путь из `project.yml`).
+- Gate: `tools/check.sh` = format + unused + reuse + test; a single step: `tools/check.sh format`.
+- Pre-commit: `lefthook install` sets up a hook with the same gate; `LEFTHOOK=0 git commit` skips it once.
+- Tools: `brew install xcodegen periphery lefthook`, `uv` for `reuse`.
+- Formatting: `xcrun swift-format format -i --recursive Bonsai BonsaiTests tools/icon`.
+- Build: `xcodegen generate && xcodebuild -scheme Bonsai -configuration Debug build | tail -40`
+- Tests: `tools/test.sh`
+- Run for manual testing: `open build.noindex/Debug/Bonsai.app` (path from `project.yml`).
+
 
 ## Definition of done
 
