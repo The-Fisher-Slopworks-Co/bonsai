@@ -83,6 +83,15 @@ struct MainPresentation: Equatable {
             bodyLines = 2
             actions = [.reject, .view]
             group = .decide
+        case .unavailable:
+            statusText = localized("mr.unavailable")
+            icon = .pause
+            tone = .secondary
+            bannerIcon = .pause
+            bannerTitle = statusText
+            bannerBody = localized("main.bn.unavailableBody")
+            actions = [.edit]
+            group = .attention
         case .broken:
             statusText = localized("main.st.broken")
             icon = .brokenCross

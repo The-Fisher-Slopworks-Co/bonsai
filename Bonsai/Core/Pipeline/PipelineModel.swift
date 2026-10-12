@@ -7,6 +7,7 @@ enum StageKind: String, Codable, CaseIterable, Sendable {
     case rebase, setup, test, push, ci
     case claude, continueRebase, retest
     case checkout, pick
+    case environment
 
     static let pipeline: [StageKind] = [.rebase, .setup, .test, .push, .ci]
 }
@@ -63,6 +64,7 @@ enum MRStatus: Codable, Equatable, Sendable {
     case ciFailed(job: String)
     case conflict(files: [String])
     case branchChanged
+    case unavailable
     case pushFailed(message: String)
     case error(message: String)
     case unknown

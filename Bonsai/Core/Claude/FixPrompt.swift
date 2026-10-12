@@ -11,6 +11,7 @@ struct FixPrompt: Sendable {
     var test: String
     var rules: String
     var projectRules: String
+    var environment: [String] = []
     var failureLog: String = ""
     var job: String?
     var conflictFiles: [String] = []
@@ -84,6 +85,7 @@ struct FixPrompt: Sendable {
         parts.append("Rules:\n" + rules.trimmingCharacters(in: .whitespacesAndNewlines))
         let project = projectRules.trimmingCharacters(in: .whitespacesAndNewlines)
         if !project.isEmpty { parts.append("Project rules:\n" + project) }
+        if let section = Self.environmentSection(environment) { parts.append(section) }
         parts.append(
             """
             Do not commit, push, reset, checkout, stash or rebase: Bonsai handles git.
@@ -106,6 +108,17 @@ struct FixPrompt: Sendable {
         ```
         Fix it under the same rules and return the same fields.
         """
+    }
+
+    static func environmentSection(_ checks: [String]) -> String? {
+        guard !checks.isEmpty else { return nil }
+        return """
+            These checks pass on this machine. The services they check are already running and are provided by the user. \
+            Do not start, stop or reconfigure services or containers.
+            ```
+            \(checks.joined(separator: "\n"))
+            ```
+            """
     }
 
     static func tail(_ log: String) -> String {

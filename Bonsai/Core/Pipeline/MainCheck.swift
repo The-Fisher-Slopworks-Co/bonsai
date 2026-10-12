@@ -7,6 +7,7 @@ struct MainCheck: Codable, Equatable, Sendable {
     enum Phase: String, Codable, Sendable {
         case checking, passed, failed, broken
         case missing, fixing, ready, rejected, stopped
+        case unavailable
     }
 
     struct Commands: Codable, Equatable, Sendable {

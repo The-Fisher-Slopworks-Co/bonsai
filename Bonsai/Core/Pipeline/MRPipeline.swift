@@ -144,6 +144,7 @@ struct MRPipeline: Sendable {
         recorder.update { run in
             run.attempt = attempt
             run.resetStages()
+            if !project.environmentChecks.isEmpty { run.stages.insert(Stage(kind: .environment), at: 1) }
             run.pushedSHA = nil
             run.pipelineID = nil
             run.failedJobID = nil
@@ -168,7 +169,7 @@ struct MRPipeline: Sendable {
             rebaseLog(LogLine(text: "$ git merge-base --is-ancestor origin/\(target) origin/\(source)", kind: .command))
             rebaseLog(LogLine(text: Note.notNeeded.rawValue, kind: .note))
             finish(.rebase, .skipped, recorder, now: now) { $0.caption = .notNeeded }
-            for kind in [StageKind.setup, .test, .push] {
+            for kind in [StageKind.environment, .setup, .test, .push] {
                 recorder.update {
                     $0[kind].state = .skipped
                     $0[kind].caption = .none
@@ -197,6 +198,8 @@ struct MRPipeline: Sendable {
         case .ok:
             finish(.rebase, .done, recorder, now: now)
         }
+
+        guard try await environmentReady(recorder, attempt: attempt, now: now) else { return .finished }
 
         for (kind, command) in [(StageKind.setup, project.setup), (.test, project.test)] {
             let trimmed = command.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -264,6 +267,35 @@ struct MRPipeline: Sendable {
 
         release()
         return try await watchCI(sha: pushed, pushed: true, recorder, attempt: attempt, now: now)
+    }
+
+    private func environmentReady(_ recorder: RunRecorder, attempt: Int, now: @Sendable () -> Date) async throws
+        -> Bool
+    {
+        let checks = project.environmentChecks
+        guard !checks.isEmpty else { return true }
+        recorder.update {
+            $0[.environment].caption = .command
+            $0[.environment].detail = checks.joined(separator: " && ")
+        }
+        start(.environment, recorder, attempt: attempt, now: now)
+        let log = recorder.log(.environment)
+        for line in checks {
+            log(LogLine(text: "$ \(line)", kind: .command))
+            guard try await effects.run(line, log: log) else {
+                markLastLine(.environment, recorder, as: .error)
+                log(LogLine(text: Note.notPushed.rawValue, kind: .note))
+                finish(.environment, .failed, recorder, now: now)
+                recorder.update {
+                    $0.status = .unavailable
+                    $0.finishedAt = now()
+                }
+                return false
+            }
+        }
+        markLastLine(.environment, recorder, as: .ok)
+        finish(.environment, .done, recorder, now: now)
+        return true
     }
 
     private func watchCI(sha: String, pushed: Bool, _ recorder: RunRecorder, attempt: Int, now: @Sendable () -> Date)

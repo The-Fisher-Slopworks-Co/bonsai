@@ -121,6 +121,13 @@ struct MRPresentation: Equatable {
             tone = .orange
             bannerTitle = statusText
             bannerBody = localized("mr.bodyPush")
+        case .unavailable:
+            statusText = localized("mr.unavailable")
+            icon = .pause
+            tone = .secondary
+            bannerTitle = statusText
+            bannerBody = localized("main.bn.unavailableBody")
+            actions = [.retry]
         case .pushFailed(let message):
             statusText = Self.stageName(.push)
             icon = .cross

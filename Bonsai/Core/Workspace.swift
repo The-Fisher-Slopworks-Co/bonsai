@@ -308,7 +308,7 @@ final class Workspace {
         let previous = mainChecks[project.id]
         if let previous, previous.sha == base, previous.commands == commands {
             if previous.phase == .passed { return project }
-            if previous.phase != .checking && !recheck { return nil }
+            if previous.phase != .checking && previous.phase != .unavailable && !recheck { return nil }
         }
         if mainTasks[project.id] != nil || (previous?.phase == .ready && previous?.commands == commands) { return nil }
         let git = git(for: project)
@@ -403,7 +403,7 @@ final class Workspace {
         let prompt = CommandPrompt(
             pick: check.pick, branch: project.targetBranch, setup: check.commands.setup, test: check.commands.test,
             failureLog: failure, rules: store.settings.claude.rules ?? localized("settings.rulesDefault"),
-            projectRules: project.rules,
+            projectRules: project.rules, environment: project.environmentChecks,
             language: FixPrompt.languageName(Bundle.main.preferredLocalizations.first ?? "en"))
         let runner = makeClaudeRunner()
         let directory = store.cloneDirectory(for: project)
@@ -729,7 +729,7 @@ final class Workspace {
     func needsRun(_ previous: MRRun?, mr: MergeRequest, base: String) -> Bool {
         guard let previous, previous.status.isFinal else { return true }
         switch previous.status {
-        case .branchChanged, .error, .behind:
+        case .branchChanged, .error, .behind, .unavailable:
             return true
         default:
             break
