@@ -151,6 +151,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             case .none: ("circle", .tertiaryLabelColor)
             case .claudeSpinner: ("arrow.triangle.2.circlepath.circle.fill", .systemPurple)
             case .dots: ("ellipsis.circle.fill", .systemPurple)
+            case .pause: ("pause.circle", .tertiaryLabelColor)
+            case .star: ("sparkle", .systemPurple)
+            case .brokenCross: ("xmark.circle.fill", .systemOrange)
             }
         let config = NSImage.SymbolConfiguration(pointSize: size, weight: .regular)
             .applying(.init(paletteColors: [.white, color]))

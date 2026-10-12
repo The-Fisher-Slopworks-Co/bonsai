@@ -7,6 +7,7 @@ struct MRPresentation: Equatable {
     enum Icon: Equatable {
         case spinner, check, cross, down, redo, none
         case claudeSpinner, dots
+        case pause, star, brokenCross
     }
 
     enum Tone: Equatable {
@@ -14,7 +15,7 @@ struct MRPresentation: Equatable {
     }
 
     enum Group: Equatable {
-        case decide, working, attention, fine
+        case decide, working, attention, waiting, fine
     }
 
     enum Action: Equatable, Hashable {
@@ -36,12 +37,25 @@ struct MRPresentation: Equatable {
     var group: Group
     var bodyLines = 1
 
-    init(_ run: MRRun) {
-        if let fix = run.fix, Self.showsFix(fix, status: run.status) {
+    init(_ run: MRRun, waitingOn branch: String? = nil) {
+        if let branch {
+            self.init(waitingOn: branch)
+        } else if let fix = run.fix, Self.showsFix(fix, status: run.status) {
             self.init(fix: fix, run: run)
         } else {
             self.init(pipeline: run)
         }
+    }
+
+    private init(waitingOn branch: String) {
+        statusText = ""
+        icon = .pause
+        tone = .secondary
+        bannerTitle = localized("main.bn.waitTitle", branch)
+        bannerBody = localized("main.bn.waitBody", branch)
+        actions = []
+        canFix = false
+        group = .waiting
     }
 
     private init(pipeline run: MRRun) {
@@ -224,7 +238,8 @@ struct MRPresentation: Equatable {
         }
     }
 
-    static func stages(_ run: MRRun) -> [Stage] {
+    static func stages(_ run: MRRun, waitingOn branch: String? = nil) -> [Stage] {
+        if branch != nil { return StageKind.pipeline.map { Stage(kind: $0) } }
         guard let fix = run.fix, showsFix(fix, status: run.status) else { return run.stages }
         let failedIndex = run.stages.firstIndex { $0.state == .failed } ?? (run.stages.count - 1)
         let pre = Array(run.stages.prefix(failedIndex + 1))
@@ -313,26 +328,37 @@ struct MRPresentation: Equatable {
         return line.kind
     }
 
-    static func autoOpen(_ run: MRRun) -> StageKind? {
+    static func autoOpen(_ run: MRRun, waitingOn branch: String? = nil) -> StageKind? {
+        if branch != nil { return nil }
         let stages = stages(run)
         if run.fix?.phase == .gaveUp { return .claude }
         if let failed = stages.last(where: { $0.state == .failed }) { return failed.kind }
         return stages.first { $0.state == .running }?.kind
     }
 
-    static func groups(_ items: [(MergeRequest, MRRun)]) -> [(title: String, items: [(MergeRequest, MRRun)])] {
+    static func groups(_ items: [(MergeRequest, MRRun)], waitingOn branch: String? = nil, main: Group? = nil)
+        -> [(title: String, main: Bool, items: [(MergeRequest, MRRun)])]
+    {
         let titled: [(Group, String)] = [
             (.decide, localized("fix.grpDecide")), (.working, localized("mr.grpWorking")),
-            (.attention, localized("mr.grpAttention")), (.fine, localized("mr.grpFine")),
+            (.attention, localized("mr.grpAttention")), (.waiting, localized("main.grpWaiting", branch ?? "")),
+            (.fine, localized("mr.grpFine")),
         ]
-        return titled.map { group, title in (title, items.filter { MRPresentation($0.1).group == group }) }.filter {
-            !$0.1.isEmpty
+        return titled.map { group, title in
+            (title, main == group, items.filter { MRPresentation($0.1, waitingOn: branch).group == group })
         }
+        .filter { $0.main || !$0.items.isEmpty }
     }
 
-    static func subtitle(project: Project, count: Int, checkedAt: Date?, now: Date = Date()) -> String {
+    static func subtitle(project: Project, count: Int, checkedAt: Date?, waiting: Bool = false, now: Date = Date())
+        -> String
+    {
         var parts = [project.path, count == 0 ? localized("mr.subtitleEmpty") : localized("mr.count", count)]
-        if count > 0, let checkedAt { parts.append(checked(checkedAt, now: now)) }
+        if count > 0 && waiting {
+            parts.append(localized("main.waiting", project.targetBranch))
+        } else if count > 0, let checkedAt {
+            parts.append(checked(checkedAt, now: now))
+        }
         return parts.joined(separator: " · ")
     }
 
