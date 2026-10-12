@@ -162,6 +162,9 @@ struct MRSnapshotTests {
         let (mrs, runs) = Self.fixtures()
         store.saveMergeRequests([1: mrs])
         store.saveRuns(runs)
+        store.saveMainChecks([
+            1: MainCheck(phase: .passed, sha: "abc", commands: MainCheck.Commands(setup: "", test: "make test"))
+        ])
         let workspace = Workspace(store: store, configuration: { MockURLProtocol.configuration() })
         let scheduler = Scheduler(workspace: workspace)
         for (index, mr) in mrs.enumerated() {
@@ -180,7 +183,7 @@ private struct MRDetailHost: View {
     let project: Project
     @State var selection: String?
     var body: some View {
-        ProjectDetail(project: project, selection: $selection)
+        ProjectDetail(project: project, selection: $selection, onEdit: {})
     }
 }
 
@@ -325,6 +328,9 @@ struct FixSnapshotTests {
         }
         store.saveMergeRequests([project.id: mrs])
         store.saveRuns(runs)
+        store.saveMainChecks([
+            1: MainCheck(phase: .passed, sha: "abc", commands: MainCheck.Commands(setup: "", test: "make test"))
+        ])
         let workspace = Workspace(store: store)
         workspace.claude = ClaudeCLI.Check(path: "/x", status: .ready)
         let scheduler = Scheduler(workspace: workspace)
@@ -346,5 +352,86 @@ struct FixSnapshotTests {
 private struct FixHost: View {
     let project: Project
     @State var selection: String?
-    var body: some View { ProjectDetail(project: project, selection: $selection) }
+    var body: some View { ProjectDetail(project: project, selection: $selection, onEdit: {}) }
+}
+
+@MainActor
+@Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["SNAPSHOTS"] == "1"))
+struct MainSnapshotTests {
+    let dir = FileManager.default.temporaryDirectory.appendingPathComponent("bonsai-snap-\(UUID().uuidString)")
+    let keychain = Keychain(service: "dev.txssu.Bonsai.tests.\(UUID().uuidString)")
+
+    static func scenes() -> [(String, MainCheck)] {
+        let commands = MainCheck.Commands(setup: "./scripts/setup.sh", test: "make test")
+        let pre = [
+            MRSnapshotTests.stage(
+                .ci, .done, .mainCiPassed, "", nil,
+                log: [LogLine(text: "pipeline #4821 · main · 3f9c2e1", kind: .output)]),
+            MRSnapshotTests.stage(
+                .checkout, .done, .ref, "origin/main · 3f9c2e1", 1.5,
+                log: [LogLine(text: "$ git checkout --detach origin/main", kind: .command)]),
+            MRSnapshotTests.stage(
+                .setup, .done, .command, "./scripts/setup.sh", 2.0, log: [LogLine(text: "setup finished", kind: .ok)]),
+            MRSnapshotTests.stage(
+                .test, .failed, .command, "make test", 2.8,
+                log: [
+                    LogLine(text: "$ make test", kind: .command),
+                    LogLine(text: "Error: connect ECONNREFUSED 127.0.0.1:5432", kind: .output),
+                    LogLine(text: "test result: FAILED. 41 passed; 87 failed", kind: .error),
+                ]),
+        ]
+        let failed = MainCheck(phase: .failed, sha: "3f9c2e1aa", commands: commands, stages: pre)
+        var fixing = failed
+        fixing.phase = .fixing
+        fixing.proposal = MainCheck.Proposal(stages: [
+            MRSnapshotTests.stage(
+                .claude, .running, .commandsOnly, "",
+                log: [
+                    LogLine(text: "Смотрю, почему не проходят тесты.", kind: .claude),
+                    LogLine(text: "Read  .gitlab-ci.yml", kind: .tool),
+                ]),
+            MRSnapshotTests.stage(.setup, .pending), MRSnapshotTests.stage(.test, .pending),
+        ])
+        var ready = failed
+        ready.phase = .ready
+        ready.proposal = MainCheck.Proposal(
+            stages: [
+                MRSnapshotTests.stage(.claude, .done, .commandsChanged, "1/0/1", 46.2),
+                MRSnapshotTests.stage(
+                    .setup, .done, .command, "docker compose up -d postgres && ./scripts/setup.sh", 2.0),
+                MRSnapshotTests.stage(.test, .done, .afterFix, "make test", 2.8),
+            ],
+            commands: MainCheck.Commands(setup: "docker compose up -d postgres\n./scripts/setup.sh", test: "make test"),
+            summary: "Тестам нужен Postgres, как в CI. Добавил его запуск в подготовку.")
+        var broken = failed
+        broken.phase = .broken
+        broken.stages[0] = MRSnapshotTests.stage(.ci, .failed, .mainCiFailed)
+        return [("failed", failed), ("fixing", fixing), ("ready", ready), ("broken", broken)]
+    }
+
+    @Test func mainScenes() async throws {
+        let store = Store(directory: dir, keychain: keychain)
+        let server = MockURLProtocol.server { _ in (404, Data()) }
+        try store.signIn(Account(server: server, username: "me", name: "Me"), token: "t")
+        defer { store.signOut() }
+        let project = Project(
+            id: 1, name: "project-main", path: "group/project-main", webURL: URL(string: "https://x")!,
+            cloneURL: URL(string: "https://x.git")!, defaultBranch: "main", targetBranch: "main",
+            setup: "./scripts/setup.sh", test: "make test")
+        store.projects = [project]
+        let (mrs, runs) = MRSnapshotTests.fixtures()
+        store.saveMergeRequests([1: mrs])
+        store.saveRuns(runs)
+        for (name, check) in Self.scenes() {
+            store.saveMainChecks([1: check])
+            let workspace = Workspace(store: store, configuration: { MockURLProtocol.configuration() })
+            let scheduler = Scheduler(workspace: workspace)
+            for (appearance, suffix) in [(NSAppearance.Name.aqua, "light"), (.darkAqua, "dark")] {
+                try await Snapshot.save(
+                    "main-\(name)-\(suffix)", size: CGSize(width: 1000, height: 600), appearance: appearance,
+                    FixHost(project: project, selection: MainPresentation.rowID).environment(workspace)
+                        .environment(scheduler))
+            }
+        }
+    }
 }

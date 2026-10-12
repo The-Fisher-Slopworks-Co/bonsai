@@ -101,7 +101,9 @@ struct MainView: View {
         guard let project = selected else { return store.account?.server.host() ?? "" }
         let state = workspace.state(project)
         guard state.loading == .loaded else { return project.path }
-        return MRPresentation.subtitle(project: project, count: state.mergeRequests.count, checkedAt: state.checkedAt)
+        return MRPresentation.subtitle(
+            project: project, count: state.mergeRequests.count, checkedAt: state.checkedAt,
+            waiting: workspace.isWaiting(project))
     }
 
     @ToolbarContentBuilder private var toolbar: some ToolbarContent {
@@ -148,7 +150,8 @@ struct MainView: View {
                 selection: Binding(
                     get: { mrSelection[project.id] },
                     set: { mrSelection[project.id] = $0 }
-                )
+                ),
+                onEdit: { editing = project }
             )
             .id(project.id)
         }
@@ -161,7 +164,11 @@ struct ProjectRow: View {
 
     var body: some View {
         let state = workspace.state(project)
-        let busy = state.mergeRequests.contains { if case .running = workspace.run($0).status { true } else { false } }
+        let main = workspace.mainCheck(project).map { MainPresentation($0, branch: project.targetBranch) }
+        let mainBusy = main.map { $0.icon == .spinner || $0.icon == .claudeSpinner } ?? false
+        let busy =
+            mainBusy
+            || state.mergeRequests.contains { if case .running = workspace.run($0).status { true } else { false } }
         HStack(spacing: 6) {
             Label {
                 Text(verbatim: project.name).lineLimit(1)
@@ -177,6 +184,10 @@ struct ProjectRow: View {
             }
             if busy {
                 ProgressView().controlSize(.mini)
+            } else if let main, MainPresentation.isVisible(workspace.mainCheck(project)) {
+                StatusIcon(icon: main.icon, size: 12)
+                    .help(main.statusText)
+                    .accessibilityLabel(main.statusText)
             }
             if state.loading == .loaded {
                 Text(verbatim: "\(state.mergeRequests.count)")
