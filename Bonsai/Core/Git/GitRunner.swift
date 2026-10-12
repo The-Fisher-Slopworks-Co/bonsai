@@ -59,15 +59,18 @@ struct GitRunner: Sendable {
     }
 
     @discardableResult
-    func run(_ args: [String], in dir: URL? = nil, onLine: (@Sendable (String) -> Void)? = nil) async throws
-        -> CommandResult
-    {
-        try await ProcessRunner.run(git, args, in: dir ?? directory, environment: environment, onLine: onLine)
+    func run(
+        _ args: [String], in dir: URL? = nil, input: Data? = nil, onLine: (@Sendable (String) -> Void)? = nil
+    ) async throws -> CommandResult {
+        try await ProcessRunner.run(
+            git, args, in: dir ?? directory, environment: environment, input: input, onLine: onLine)
     }
 
     @discardableResult
-    func checked(_ args: [String], onLine: (@Sendable (String) -> Void)? = nil) async throws -> String {
-        let result = try await run(args, onLine: onLine)
+    func checked(_ args: [String], input: Data? = nil, onLine: (@Sendable (String) -> Void)? = nil) async throws
+        -> String
+    {
+        let result = try await run(args, input: input, onLine: onLine)
         guard result.succeeded else {
             throw GitError(command: "git " + args.joined(separator: " "), status: result.status, output: result.output)
         }

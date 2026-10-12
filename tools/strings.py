@@ -245,6 +245,7 @@ S = {
     "ps.delete": ("Remove", "Убрать"),
     "ps.alertTitle": ("Remove “%@” from Bonsai?", "Убрать «%@» из Bonsai?"),
     "ps.alertBody": ("The clone will be deleted. MRs in GitLab won’t change.", "Клон будет удалён. MR в GitLab не изменятся."),
+    "localCopy.missing": ("“%@” isn’t in the local copy.", "В локальной копии нет «%@»."),
 
     "fix.claudeFixing": ("Claude is fixing…", "Claude исправляет…"),
     "fix.waitReview": ("Fix ready", "Исправление готово"),

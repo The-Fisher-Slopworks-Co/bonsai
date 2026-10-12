@@ -23,6 +23,7 @@ struct LivePipelineEffects: PipelineEffects {
 
     func checkout(_ branch: String, log: @escaping LogSink) async throws {
         try await abortStaleRebase()
+        try await git.restoreCopied()
         try await git.checked(
             ["checkout", "--quiet", "--force", "-B", branch, "origin/\(branch)"], onLine: output(log))
         try await git.checked(["clean", "-fdq"])
@@ -30,6 +31,7 @@ struct LivePipelineEffects: PipelineEffects {
 
     func detach(_ ref: String, log: @escaping LogSink) async throws {
         try await abortStaleRebase()
+        try await git.restoreCopied()
         try await git.checked(["checkout", "--force", "--detach", ref], onLine: output(log))
         try await git.checked(["clean", "-fdq"])
     }
