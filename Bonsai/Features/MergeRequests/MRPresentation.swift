@@ -269,7 +269,16 @@ struct MRPresentation: Equatable {
         case .ref: stage.detail
         case .mainCiPassed: localized("main.sub.ciOk")
         case .mainCiFailed: localized("main.sub.ciFail")
+        case .commandsOnly: localized("main.sub.commandsOnly")
+        case .commandsChanged: commandsChanged(numbers(stage.detail))
         }
+    }
+
+    private static func commandsChanged(_ numbers: [Int]) -> String {
+        guard numbers.count == 3 else { return "" }
+        if numbers[0] == 1 && numbers[1] == 1 { return localized("main.sub.both") }
+        let name = localized(numbers[0] == 1 ? "main.sub.setup" : "main.sub.test")
+        return numbers[2] > 0 ? name + " · " + localized("main.sub.lines", numbers[2]) : name
     }
 
     static func stat(added: Int, removed: Int) -> String {

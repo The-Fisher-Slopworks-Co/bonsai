@@ -10,6 +10,8 @@ struct ClaudeResult: Equatable, Sendable {
     var commitMessage: String
     var notes: [String: String]
     var errorText: String?
+    var setup: String?
+    var test: String?
 }
 
 enum ClaudeEvent: Equatable, Sendable {
@@ -135,7 +137,8 @@ struct ClaudeStreamParser {
             sessionID: object["session_id"] as? String, isError: isError,
             summary: (structured["summary"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
             commitMessage: (structured["commit"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines),
-            notes: notes, errorText: isError ? object["result"] as? String : nil)
+            notes: notes, errorText: isError ? object["result"] as? String : nil,
+            setup: structured["setup"] as? String, test: structured["test"] as? String)
     }
 
     private func relative(_ path: String) -> String {

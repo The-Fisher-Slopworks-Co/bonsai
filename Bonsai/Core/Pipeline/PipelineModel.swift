@@ -6,7 +6,7 @@ import Foundation
 enum StageKind: String, Codable, CaseIterable, Sendable {
     case rebase, setup, test, push, ci
     case claude, continueRebase, retest
-    case checkout
+    case checkout, pick
 
     static let pipeline: [StageKind] = [.rebase, .setup, .test, .push, .ci]
 }
@@ -36,6 +36,7 @@ struct Stage: Codable, Equatable, Sendable {
         case claudeAttempt, claudeChanged, claudeResolved, claudeFailed
         case afterFix
         case ref, mainCiPassed, mainCiFailed
+        case commandsOnly, commandsChanged
     }
 
     var kind: StageKind

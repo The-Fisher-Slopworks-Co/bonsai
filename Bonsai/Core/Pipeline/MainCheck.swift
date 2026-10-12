@@ -6,6 +6,7 @@ import Foundation
 struct MainCheck: Codable, Equatable, Sendable {
     enum Phase: String, Codable, Sendable {
         case checking, passed, failed, broken
+        case missing, fixing, ready, rejected, stopped
     }
 
     struct Commands: Codable, Equatable, Sendable {
@@ -22,11 +23,27 @@ struct MainCheck: Codable, Equatable, Sendable {
         }
     }
 
+    struct Proposal: Codable, Equatable, Sendable {
+        var stages: [Stage]
+        var commands: Commands?
+        var summary = ""
+        var sessionID: String?
+
+        subscript(kind: StageKind) -> Stage {
+            get { stages.first { $0.kind == kind } ?? Stage(kind: kind) }
+            set {
+                if let index = stages.firstIndex(where: { $0.kind == kind }) { stages[index] = newValue }
+            }
+        }
+    }
+
     var phase: Phase = .checking
     var sha: String
     var commands: Commands
     var stages: [Stage] = []
     var lastPassed: Commands?
+    var pick = false
+    var proposal: Proposal?
     var finishedAt: Date?
 
     subscript(kind: StageKind) -> Stage {
@@ -43,6 +60,10 @@ struct MainCheck: Codable, Equatable, Sendable {
 
 extension MainCheck: Recordable {
     mutating func append(_ line: LogLine, to kind: StageKind, fix: Bool) {
-        self[kind].append(line)
+        if fix {
+            proposal?[kind].append(line)
+        } else {
+            self[kind].append(line)
+        }
     }
 }
