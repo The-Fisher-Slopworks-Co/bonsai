@@ -11,6 +11,7 @@ struct CommandPrompt: Sendable {
     var failureLog = ""
     var rules: String
     var projectRules: String
+    var environment: [String] = []
     var language: String
 
     static let schema =
@@ -48,6 +49,7 @@ struct CommandPrompt: Sendable {
         parts.append("Rules:\n" + rules.trimmingCharacters(in: .whitespacesAndNewlines))
         let project = projectRules.trimmingCharacters(in: .whitespacesAndNewlines)
         if !project.isEmpty { parts.append("Project rules:\n" + project) }
+        if let section = FixPrompt.environmentSection(environment) { parts.append(section) }
         parts.append(
             """
             Change only the commands. Do not edit, create or delete files in the repository: \

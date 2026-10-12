@@ -20,6 +20,10 @@ struct FixPipeline: Sendable {
     var rules: String
     var config = Config()
 
+    private struct EnvironmentUnavailable: Error {
+        var log: [LogLine]
+    }
+
     func fix(_ kind: ClaudeFix.Kind, _ recorder: RunRecorder, now: @Sendable () -> Date = Date.init) async -> MRRun {
         let failed = recorder.run
         recorder.update { run in
@@ -50,9 +54,48 @@ struct FixPipeline: Sendable {
                 run.fix?.files = []
             }
             return recorder.run
+        } catch let error as EnvironmentUnavailable {
+            return await environmentDown(error, recorder, now: now)
         } catch {
             return await giveUp(recorder, error: error, now: now)
         }
+    }
+
+    private func checkEnvironment() async throws {
+        let buffer = LogBuffer()
+        for line in project.environmentChecks {
+            buffer.append(LogLine(text: "$ \(line)", kind: .command))
+            guard try await effects.run(line, log: buffer.append).ok else {
+                var log = buffer.lines
+                if let index = log.lastIndex(where: { $0.kind == .output }) { log[index].kind = .error }
+                throw EnvironmentUnavailable(log: log + [LogLine(text: Note.notPushed.rawValue, kind: .note)])
+            }
+        }
+    }
+
+    private func environmentDown(_ error: EnvironmentUnavailable, _ recorder: RunRecorder, now: () -> Date) async
+        -> MRRun
+    {
+        await effects.discard()
+        recorder.update { run in
+            run.fix = nil
+            if !run.stages.contains(where: { $0.kind == .environment }) {
+                run.stages.insert(Stage(kind: .environment), at: min(1, run.stages.count))
+            }
+            let index = run.stages.firstIndex { $0.kind == .environment }!
+            for later in run.stages.indices.dropFirst(index + 1) {
+                run.stages[later] = Stage(kind: run.stages[later].kind)
+            }
+            var stage = Stage(kind: .environment)
+            stage.caption = .command
+            stage.detail = project.environmentChecks.joined(separator: " && ")
+            stage.state = .failed
+            stage.log = error.log
+            run.stages[index] = stage
+            run.status = .unavailable
+            run.finishedAt = now()
+        }
+        return recorder.run
     }
 
     private func attempt(_ kind: ClaudeFix.Kind, failed: MRRun, _ recorder: RunRecorder, now: @Sendable () -> Date)
@@ -66,6 +109,7 @@ struct FixPipeline: Sendable {
         }
 
         try await effects.prepare(branch: mr.sourceBranch, log: { _ in })
+        try await checkEnvironment()
         var conflictFiles: [String] = []
         var conflicted: [String: String] = [:]
         switch kind {
@@ -88,7 +132,8 @@ struct FixPipeline: Sendable {
 
         var prompt = FixPrompt(
             kind: kind, branch: mr.sourceBranch, base: "origin/\(project.targetBranch)", setup: project.setup,
-            test: project.test, rules: rules, projectRules: project.rules, conflictFiles: conflictFiles,
+            test: project.test, rules: rules, projectRules: project.rules, environment: project.environmentChecks,
+            conflictFiles: conflictFiles,
             language: config.language)
         switch kind {
         case .tests:
@@ -222,6 +267,7 @@ struct FixPipeline: Sendable {
     private let noteStore = Notes()
 
     private func retest(_ recorder: RunRecorder, now: @Sendable () -> Date, withSetup: Bool) async throws -> Bool {
+        try await checkEnvironment()
         start(.retest, recorder, now: now)
         let log = recorder.fixLog(.retest)
         if withSetup && !project.setup.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -432,6 +478,8 @@ struct FixPipeline: Sendable {
                 return await push(message: recorder.run.fix?.commitMessage ?? "", recorder, now: now)
             }
         } catch is CancellationError {
+        } catch let error as EnvironmentUnavailable {
+            return await environmentDown(error, recorder, now: now)
         } catch {
             recorder.update { $0.fix?.phase = .terminal }
         }
@@ -466,6 +514,13 @@ struct FixPipeline: Sendable {
     private func firstLine(_ text: String) -> String {
         text.split(separator: "\n").first.map { $0.trimmingCharacters(in: .whitespaces) } ?? ""
     }
+}
+
+private final class LogBuffer: @unchecked Sendable {
+    private let lock = NSLock()
+    private var all: [LogLine] = []
+    @Sendable func append(_ line: LogLine) { lock.withLock { all.append(line) } }
+    var lines: [LogLine] { lock.withLock { all } }
 }
 
 private final class Notes: @unchecked Sendable {

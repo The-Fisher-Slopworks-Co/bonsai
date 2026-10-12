@@ -8,6 +8,9 @@ struct MainPipeline: Sendable {
     var effects: any PipelineEffects
 
     private var target: String { project.targetBranch }
+    private var environment: [String] { project.environmentChecks }
+
+    private struct EnvironmentUnavailable: Error {}
 
     func check(_ recorder: Recorder<MainCheck>, now: @Sendable () -> Date = Date.init) async throws -> MainCheck {
         let sha = recorder.run.sha
@@ -16,6 +19,7 @@ struct MainPipeline: Sendable {
         recorder.update { check in
             check.phase = .checking
             check.stages = [Stage(kind: .checkout, caption: .ref, detail: "origin/\(target) · \(sha.prefix(7))")]
+            if !environment.isEmpty { check.stages.append(Stage(kind: .environment)) }
             for (kind, command) in [(StageKind.setup, commands.setup), (.test, commands.test)] {
                 check.stages.append(
                     command.isEmpty
@@ -43,6 +47,13 @@ struct MainPipeline: Sendable {
         try await effects.detach("origin/\(target)", log: checkoutLog)
         finish(.checkout, .done, recorder, now: now)
 
+        guard try await checkEnvironment(recorder, now: now) else {
+            recorder.update { check in
+                check.phase = .unavailable
+                check.finishedAt = now()
+            }
+            return recorder.run
+        }
         for (kind, command) in [(StageKind.setup, commands.setup), (.test, commands.test)] where !command.isEmpty {
             start(kind, recorder, now: now)
             let log = recorder.log(kind)
@@ -80,12 +91,15 @@ struct MainPipeline: Sendable {
         recorder.update { check in
             check.phase = .fixing
             check.proposal = MainCheck.Proposal(
-                stages: [Stage(kind: kind, caption: .commandsOnly), Stage(kind: .setup), Stage(kind: .test)])
+                stages: (environment.isEmpty ? [] : [Stage(kind: .environment)]) + [
+                    Stage(kind: kind, caption: .commandsOnly), Stage(kind: .setup), Stage(kind: .test),
+                ])
         }
-        start(kind, recorder, now: now, fix: true)
         let log = recorder.fixLog(kind)
         do {
             try await effects.detach("origin/\(target)", log: { _ in })
+            guard try await checkEnvironment(recorder, now: now, fix: true) else { throw EnvironmentUnavailable() }
+            start(kind, recorder, now: now, fix: true)
             var session: String?
             var lastFailure = ""
             for attempt in 1...max(1, attempts) {
@@ -127,6 +141,14 @@ struct MainPipeline: Sendable {
                 check.phase = .stopped
                 check.proposal = nil
             }
+        } catch is EnvironmentUnavailable {
+            recorder.update { check in
+                for stage in [kind, .setup, .test] where check.proposal?[stage].state == .running {
+                    check.proposal?[stage].state = .pending
+                }
+                check.phase = .unavailable
+                check.finishedAt = now()
+            }
         } catch {
             log(LogLine(text: MRPipeline.describe(error), kind: .error))
             giveUp(kind, attempts: attempts, phase: fallback, recorder, now: now)
@@ -138,6 +160,7 @@ struct MainPipeline: Sendable {
         _ commands: MainCheck.Commands, pick: Bool, _ recorder: Recorder<MainCheck>, now: @Sendable () -> Date
     ) async throws -> Bool {
         try await effects.detach("origin/\(target)", log: { _ in })
+        guard try await checkEnvironment(recorder, now: now, fix: true) else { throw EnvironmentUnavailable() }
         guard !commands.test.isEmpty else {
             recorder.update { $0.proposal?[.test].state = .failed }
             return false
@@ -159,6 +182,30 @@ struct MainPipeline: Sendable {
             finish(kind, ok ? .done : .failed, recorder, now: now, fix: true)
             if !ok { return false }
         }
+        return true
+    }
+
+    private func checkEnvironment(_ recorder: Recorder<MainCheck>, now: @Sendable () -> Date, fix: Bool = false)
+        async throws -> Bool
+    {
+        guard !environment.isEmpty else { return true }
+        recorder.update { check in
+            Self.edit(&check, .environment, fix: fix) { stage in
+                stage = Stage(kind: .environment, caption: .command, detail: environment.joined(separator: " && "))
+            }
+        }
+        start(.environment, recorder, now: now, fix: fix)
+        let log = fix ? recorder.fixLog(.environment) : recorder.log(.environment)
+        for line in environment {
+            log(LogLine(text: "$ \(line)", kind: .command))
+            guard try await effects.run(line, log: log) else {
+                markLastLine(.environment, recorder, as: .error, fix: fix)
+                finish(.environment, .failed, recorder, now: now, fix: fix)
+                return false
+            }
+        }
+        markLastLine(.environment, recorder, as: .ok, fix: fix)
+        finish(.environment, .done, recorder, now: now, fix: fix)
         return true
     }
 

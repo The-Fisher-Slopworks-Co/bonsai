@@ -1609,6 +1609,23 @@
         }
       }
     },
+    "main.bn.unavailableBody": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bonsai will check again on its own."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bonsai проверит ещё раз сам."
+          }
+        }
+      }
+    },
     "main.bn.waitBody": {
       "extractionState": "manual",
       "localizations": {
@@ -3323,6 +3340,23 @@
         }
       }
     },
+    "mr.stage.environment": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environment"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Окружение"
+          }
+        }
+      }
+    },
     "mr.stage.pick": {
       "extractionState": "manual",
       "localizations": {
@@ -3506,6 +3540,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Тесты упали"
+          }
+        }
+      }
+    },
+    "mr.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environment isn’t ready"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Окружение не готово"
           }
         }
       }
@@ -3778,6 +3829,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Нет проектов"
+          }
+        }
+      }
+    },
+    "projects.environment": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environment"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Окружение"
+          }
+        }
+      }
+    },
+    "projects.environmentHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Must already be running. Bonsai checks it, never starts it."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Должно уже работать. Bonsai проверяет, но не запускает."
           }
         }
       }

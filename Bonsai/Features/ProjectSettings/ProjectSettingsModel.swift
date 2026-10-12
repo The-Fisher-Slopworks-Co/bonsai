@@ -7,7 +7,7 @@ import Observation
 @MainActor
 @Observable
 final class ProjectSettingsModel {
-    enum Command { case setup, test }
+    enum Command { case environment, setup, test }
 
     let original: Project
     var draft: Project
@@ -38,7 +38,11 @@ final class ProjectSettingsModel {
     }
 
     private func value(_ command: Command, in project: Project) -> String {
-        command == .setup ? project.setup : project.test
+        switch command {
+        case .environment: project.environment
+        case .setup: project.setup
+        case .test: project.test
+        }
     }
 
     var hasChanges: Bool { draft != original }
@@ -65,6 +69,7 @@ final class ProjectSettingsModel {
         var project = draft
         project.setup = project.setup.trimmingCharacters(in: .whitespacesAndNewlines)
         project.test = project.test.trimmingCharacters(in: .whitespacesAndNewlines)
+        project.environment = project.environment.trimmingCharacters(in: .whitespacesAndNewlines)
         project.rules = project.rules.trimmingCharacters(in: .whitespacesAndNewlines)
         return project
     }

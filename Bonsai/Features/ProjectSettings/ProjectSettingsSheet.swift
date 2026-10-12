@@ -51,6 +51,12 @@ struct ProjectSettingsSheet: View {
                     .fixedSize()
                 }
                 GridRow {
+                    label(localized("projects.environment"))
+                    command(
+                        $model.draft.environment, .environment, placeholder: "nc -z localhost 5432",
+                        hint: localized("projects.environmentHint"))
+                }
+                GridRow {
                     label(localized("projects.setup"))
                     command(
                         $model.draft.setup, .setup, placeholder: "./scripts/setup.sh",

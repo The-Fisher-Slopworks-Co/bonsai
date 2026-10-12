@@ -29,6 +29,30 @@ struct Project: Codable, Equatable, Identifiable, Sendable {
     var paused: Bool = false
     var claude: ClaudeMode = .inherit
     var rules: String = ""
+    var environment: String = ""
+
+    var environmentChecks: [String] {
+        environment.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+}
+
+extension Project {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(Int.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        path = try c.decode(String.self, forKey: .path)
+        webURL = try c.decode(URL.self, forKey: .webURL)
+        cloneURL = try c.decode(URL.self, forKey: .cloneURL)
+        defaultBranch = try c.decode(String.self, forKey: .defaultBranch)
+        targetBranch = try c.decode(String.self, forKey: .targetBranch)
+        setup = try c.decode(String.self, forKey: .setup)
+        test = try c.decode(String.self, forKey: .test)
+        paused = try c.decodeIfPresent(Bool.self, forKey: .paused) ?? false
+        claude = try c.decodeIfPresent(ClaudeMode.self, forKey: .claude) ?? .inherit
+        rules = try c.decodeIfPresent(String.self, forKey: .rules) ?? ""
+        environment = try c.decodeIfPresent(String.self, forKey: .environment) ?? ""
+    }
 }
 
 struct MergeRequest: Codable, Equatable, Identifiable, Sendable {
