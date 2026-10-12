@@ -95,22 +95,6 @@ final class GitLabClient: Sendable {
         return all.filter(\.isDefault) + all.filter { !$0.isDefault }
     }
 
-    func rootFiles(project: Int, ref: String) async throws -> [String] {
-        let entries: [GitLabTreeEntry] = try await get(
-            "projects/\(project)/repository/tree", query: ["ref": ref, "per_page": "100"])
-        return entries.filter { $0.type == "blob" }.map(\.name)
-    }
-
-    func file(project: Int, path: String, ref: String) async throws -> String? {
-        do {
-            let data = try await send(
-                request("projects/\(project)/repository/files/\(Self.segment(path))/raw", query: ["ref": ref]))
-            return String(decoding: data, as: UTF8.self)
-        } catch GitLabError.http(status: 404) {
-            return nil
-        }
-    }
-
     func mergeRequests(project: Int, scope: MRScope) async throws -> [MergeRequest] {
         let query = [
             "state": "opened", "scope": scope == .mine ? "created_by_me" : "all", "per_page": "100",

@@ -3729,23 +3729,6 @@
         }
       }
     },
-    "projects.foundIn": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "From %@."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Из %@."
-          }
-        }
-      }
-    },
     "projects.loading": {
       "extractionState": "manual",
       "localizations": {
@@ -3776,6 +3759,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Не найдено"
+          }
+        }
+      }
+    },
+    "projects.pickPh": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude will pick"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подберёт Claude"
           }
         }
       }

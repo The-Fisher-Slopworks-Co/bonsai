@@ -66,13 +66,4 @@ struct GitLabProjectsTests {
         #expect(names.count == GitLabClient.branchPageSize * GitLabClient.branchPageLimit + 1)
         #expect(MockURLProtocol.recorded(server).count == GitLabClient.branchPageLimit + 1)
     }
-
-    @Test func fileRawEncodesPathAnd404IsNil() async throws {
-        let server = MockURLProtocol.server { request in
-            request.url!.absoluteString.contains("scripts%2Fsetup.sh") ? (200, Data("#!/bin/sh".utf8)) : (404, Data())
-        }
-        let client = GitLabClient(server: server, token: "t", configuration: MockURLProtocol.configuration())
-        #expect(try await client.file(project: 5, path: "scripts/setup.sh", ref: "main") == "#!/bin/sh")
-        #expect(try await client.file(project: 5, path: "Makefile", ref: "main") == nil)
-    }
 }

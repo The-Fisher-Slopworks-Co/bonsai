@@ -14,15 +14,13 @@ final class AddProjectModel {
     private(set) var branches: [GitLabBranch] = []
     var branch: String?
     var setup = ""
-    var test = "" { didSet { if test != oldValue && !applyingDetection { detectedFrom = nil } } }
-    private(set) var detectedFrom: String?
+    var test = ""
 
     private let client: GitLabClient
     private let excluded: Set<Int>
     private let debounce: Duration
     private var searchTask: Task<Void, Never>?
     private var detailsTask: Task<Void, Never>?
-    private var applyingDetection = false
 
     init(client: GitLabClient, excluded: Set<Int>, debounce: Duration = .milliseconds(250)) {
         self.client = client
@@ -32,16 +30,7 @@ final class AddProjectModel {
 
     var selected: GitLabProject? { results.first { $0.id == selectedID } }
 
-    var canAdd: Bool {
-        selected != nil && branch != nil && !test.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
-    var testHint: String {
-        if let detectedFrom, !test.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            return localized("projects.foundIn", detectedFrom) + " " + localized("projects.testHint")
-        }
-        return localized("projects.testHint")
-    }
+    var canAdd: Bool { selected != nil && branch != nil }
 
     func start() {
         search(immediately: true)
@@ -80,30 +69,14 @@ final class AddProjectModel {
         detailsTask?.cancel()
         branches = []
         branch = nil
-        applyDetection(nil)
+        setup = ""
+        test = ""
         guard let project = selected else { return }
         detailsTask = Task {
             let loaded = (try? await client.branches(project: project.id, defaultBranch: project.defaultBranch)) ?? []
             guard !Task.isCancelled, selectedID == project.id else { return }
             branches = loaded
-            let base = loaded.first(where: \.isDefault)?.name ?? project.defaultBranch ?? loaded.first?.name
-            branch = base
-            guard let base else { return }
-            let client = self.client
-            let files = (try? await client.rootFiles(project: project.id, ref: base)) ?? []
-            let found = try? await CommandDetector.detect(files: files) { path in
-                try await client.file(project: project.id, path: path, ref: base)
-            }
-            guard !Task.isCancelled, selectedID == project.id else { return }
-            applyDetection(found ?? nil)
+            branch = loaded.first(where: \.isDefault)?.name ?? project.defaultBranch ?? loaded.first?.name
         }
-    }
-
-    private func applyDetection(_ found: DetectedCommands?) {
-        applyingDetection = true
-        setup = found?.setup ?? ""
-        test = found?.test ?? ""
-        detectedFrom = found?.source
-        applyingDetection = false
     }
 }

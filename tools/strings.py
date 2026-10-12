@@ -40,7 +40,7 @@ S = {
     "projects.setupHint": ("Before tests. Optional.", "Перед тестами. Необязательно."),
     "projects.test": ("Tests", "Тесты"),
     "projects.testHint": ("If they fail, nothing is pushed.", "Если упадут, push не будет."),
-    "projects.foundIn": ("From %@.", "Из %@."),
+    "projects.pickPh": ("Claude will pick", "Подберёт Claude"),
     "projects.cancel": ("Cancel", "Отменить"),
     "projects.addButton": ("Add", "Добавить"),
     "projects.loading": ("Loading MRs…", "Загрузка MR…"),

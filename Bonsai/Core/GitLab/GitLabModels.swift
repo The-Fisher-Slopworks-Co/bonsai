@@ -30,11 +30,6 @@ struct GitLabBranch: Codable, Equatable, Sendable {
     }
 }
 
-struct GitLabTreeEntry: Codable, Equatable, Sendable {
-    var name: String
-    var type: String
-}
-
 struct GitLabMergeRequest: Codable, Equatable, Sendable {
     struct Author: Codable, Equatable, Sendable {
         var username: String

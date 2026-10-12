@@ -40,14 +40,15 @@ struct LiveConnectTests {
         await sheet.settle()
         #expect(sheet.selected?.id == id)
         #expect(sheet.branch == "main")
-        #expect(sheet.test == "make test")
-        #expect(sheet.setup == "./scripts/setup.sh")
-        #expect(sheet.detectedFrom == "Makefile")
+        #expect(sheet.test.isEmpty)
         let project = try #require(sheet.project())
 
         workspace.pipelineConfig.ciPollInterval = 3
         workspace.add(project)
         await workspace.waitUntilIdle()
+        let detected = try #require(store.projects.first { $0.id == project.id })
+        #expect(detected.test == "make test")
+        #expect(detected.setup == "./scripts/setup.sh")
         let state = workspace.state(project)
         #expect(state.error == nil)
         #expect(
