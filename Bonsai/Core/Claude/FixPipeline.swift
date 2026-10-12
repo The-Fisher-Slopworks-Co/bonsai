@@ -56,6 +56,14 @@ struct FixPipeline: Sendable {
             return recorder.run
         } catch let error as EnvironmentUnavailable {
             return await environmentDown(error, recorder, now: now)
+        } catch is LocalCopyError {
+            await effects.discard()
+            recorder.update { run in
+                run.fix = nil
+                run.status = .unavailable
+                run.finishedAt = now()
+            }
+            return recorder.run
         } catch {
             return await giveUp(recorder, error: error, now: now)
         }
@@ -117,8 +125,9 @@ struct FixPipeline: Sendable {
             if case .conflict = try await effects.rebase(onto: "origin/\(project.targetBranch)", log: { _ in }) {
                 throw ClaudeError(message: "rebase conflict")
             }
+            try await copyLocal(log: claudeLog)
         case .ci:
-            break
+            try await copyLocal(log: claudeLog)
         case .conflict:
             claudeLog(LogLine(text: "$ git rebase origin/\(project.targetBranch)", kind: .command))
             switch try await effects.rebase(onto: "origin/\(project.targetBranch)", log: claudeLog) {
@@ -133,7 +142,7 @@ struct FixPipeline: Sendable {
         var prompt = FixPrompt(
             kind: kind, branch: mr.sourceBranch, base: "origin/\(project.targetBranch)", setup: project.setup,
             test: project.test, rules: rules, projectRules: project.rules, environment: project.environmentChecks,
-            conflictFiles: conflictFiles,
+            localCopy: project.localCopyPath, copied: project.copiedPaths, conflictFiles: conflictFiles,
             language: config.language)
         switch kind {
         case .tests:
@@ -183,6 +192,7 @@ struct FixPipeline: Sendable {
                     session = more.sessionID ?? session
                     if more.isError { throw ClaudeError(message: more.errorText ?? "claude") }
                 }
+                try await copyLocal(log: continueLog)
                 finish(.continueRebase, .done, recorder, now: now)
                 if !project.setup.trimmingCharacters(in: .whitespaces).isEmpty {
                     start(.setup, recorder, now: now)
@@ -484,6 +494,11 @@ struct FixPipeline: Sendable {
             recorder.update { $0.fix?.phase = .terminal }
         }
         return recorder.run
+    }
+
+    private func copyLocal(log: @escaping LogSink) async throws {
+        guard project.copiesLocally else { return }
+        try await effects.copy(project.copiedPaths, from: project.localCopy, log: log)
     }
 
     private func start(_ kind: StageKind, _ recorder: RunRecorder, now: () -> Date) {

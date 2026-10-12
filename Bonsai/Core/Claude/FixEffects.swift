@@ -8,6 +8,7 @@ protocol FixEffects: Sendable {
     func prepare(branch: String, log: @escaping LogSink) async throws
     func rebase(onto ref: String, log: @escaping LogSink) async throws -> RebaseResult
     func continueRebase(log: @escaping LogSink) async throws -> RebaseResult
+    func copy(_ paths: [String], from localCopy: String, log: @escaping LogSink) async throws
     func read(_ path: String) -> String?
     func run(_ command: String, log: @escaping LogSink) async throws -> (ok: Bool, output: String)
     func claude(prompt: String, tools: [String], resume: String?, onEvent: @escaping @Sendable (ClaudeEvent) -> Void)
@@ -31,6 +32,7 @@ struct LiveFixEffects: FixEffects {
     var projectID: Int
     var claudePath: String
     var runner: any ClaudeRunning = LiveClaudeRunner()
+    var directories: [String] = []
     var shell = "/bin/zsh"
 
     private var git: GitRunner { GitRunner(directory: worktree, auth: clone.auth, identity: clone.identity) }
@@ -59,6 +61,10 @@ struct LiveFixEffects: FixEffects {
             or: GitError(command: "git rebase --continue", status: result.status, output: result.output))
     }
 
+    func copy(_ paths: [String], from localCopy: String, log: @escaping LogSink) async throws {
+        try await git.copy(paths, from: localCopy, log: log)
+    }
+
     private func conflicts(or error: GitError) async throws -> RebaseResult {
         let files = try await git.checked(["diff", "--name-only", "--diff-filter=U"]).split(separator: "\n").map(
             String.init)
@@ -80,7 +86,7 @@ struct LiveFixEffects: FixEffects {
     {
         let request = ClaudeRequest(
             executable: claudePath, directory: worktree, prompt: prompt, allowedTools: tools,
-            schema: FixPrompt.schema, resume: resume)
+            schema: FixPrompt.schema, resume: resume, directories: directories)
         return try await runner.run(request, onEvent: onEvent)
     }
 

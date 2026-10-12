@@ -15,6 +15,7 @@ final class FakeEffects: PipelineEffects, @unchecked Sendable {
     var pipelines: [CIPipeline?] = [CIPipeline(id: 7, status: .passed)]
     var job: CIJob? = CIJob(id: 70, name: "lint")
     var fetchError: Error?
+    var missingCopies: [String] = []
     var blockOnCommand: String?
     private(set) var calls: [String] = []
     private(set) var slept: [TimeInterval] = []
@@ -38,6 +39,10 @@ final class FakeEffects: PipelineEffects, @unchecked Sendable {
         return .conflict(files: conflictFiles)
     }
     func abortRebase(log: @escaping LogSink) async { record("abort") }
+    func copy(_ paths: [String], from localCopy: String, log: @escaping LogSink) async throws {
+        record("copy \(paths.joined(separator: ",")) from \(localCopy)")
+        if let missing = missingCopies.first(where: paths.contains) { throw LocalCopyError(path: missing) }
+    }
     func run(_ command: String, log: @escaping LogSink) async throws -> Bool {
         record("run \(command)")
         if command == blockOnCommand { try await Task.sleep(for: .seconds(30)) }

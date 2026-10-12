@@ -404,14 +404,16 @@ final class Workspace {
             pick: check.pick, branch: project.targetBranch, setup: check.commands.setup, test: check.commands.test,
             failureLog: failure, rules: store.settings.claude.rules ?? localized("settings.rulesDefault"),
             projectRules: project.rules, environment: project.environmentChecks,
+            localCopy: project.localCopyPath, copied: project.copiedPaths,
             language: FixPrompt.languageName(Bundle.main.preferredLocalizations.first ?? "en"))
         let runner = makeClaudeRunner()
         let directory = store.cloneDirectory(for: project)
+        let directories = project.localCopyPath.map { [$0] } ?? []
         let claude: MainPipeline.Claude = { text, resume, onEvent in
             try await runner.run(
                 ClaudeRequest(
                     executable: path, directory: directory, prompt: text, allowedTools: CommandPrompt.allowedTools,
-                    schema: CommandPrompt.schema, resume: resume), onEvent: onEvent)
+                    schema: CommandPrompt.schema, resume: resume, directories: directories), onEvent: onEvent)
         }
         let pipeline = MainPipeline(project: project, effects: mainEffects(project, client: client))
         let attempts = store.settings.claude.attempts
@@ -625,7 +627,8 @@ final class Workspace {
         guard let path = claude?.path else { return nil }
         let effects = LiveFixEffects(
             clone: git(for: project), worktree: worktree(for: mr, project: project), gitlab: client,
-            projectID: project.id, claudePath: path, runner: makeClaudeRunner())
+            projectID: project.id, claudePath: path, runner: makeClaudeRunner(),
+            directories: project.localCopyPath.map { [$0] } ?? [])
         var config = fixConfig
         config.attempts = store.settings.claude.attempts
         config.autoPush = store.settings.claude.push == .auto

@@ -37,6 +37,7 @@ protocol PipelineEffects: Sendable {
     func checkout(_ branch: String, log: @escaping LogSink) async throws
     func detach(_ ref: String, log: @escaping LogSink) async throws
     func rebase(onto ref: String, log: @escaping LogSink) async throws -> RebaseResult
+    func copy(_ paths: [String], from localCopy: String, log: @escaping LogSink) async throws
     func abortRebase(log: @escaping LogSink) async
     func run(_ command: String, log: @escaping LogSink) async throws -> Bool
     func head() async throws -> String

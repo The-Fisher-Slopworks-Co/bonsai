@@ -12,6 +12,8 @@ struct CommandPrompt: Sendable {
     var rules: String
     var projectRules: String
     var environment: [String] = []
+    var localCopy: String?
+    var copied: [String] = []
     var language: String
 
     static let schema =
@@ -46,6 +48,7 @@ struct CommandPrompt: Sendable {
                 ```
                 """)
         }
+        if let section = Self.localCopy(localCopy, copied: copied) { parts.append(section) }
         parts.append("Rules:\n" + rules.trimmingCharacters(in: .whitespacesAndNewlines))
         let project = projectRules.trimmingCharacters(in: .whitespacesAndNewlines)
         if !project.isEmpty { parts.append("Project rules:\n" + project) }
@@ -61,6 +64,20 @@ struct CommandPrompt: Sendable {
             saying what the tests need and what you \(pick ? "chose" : "changed").
             """)
         return parts.joined(separator: "\n\n")
+    }
+
+    static func localCopy(_ path: String?, copied: [String]) -> String? {
+        guard let path else { return nil }
+        var text = """
+            There is a working checkout of this repository on this machine at `\(path)`. \
+            Read it to see how the project is set up locally, but never modify it. Copied files may contain \
+            absolute paths or symlinks that point into it: never write through them.
+            """
+        if !copied.isEmpty {
+            text += "\nBonsai copies these paths from it into this checkout before setup:\n"
+            text += copied.map { "- \($0)" }.joined(separator: "\n")
+        }
+        return text
     }
 
     func retry(output: String) -> String {

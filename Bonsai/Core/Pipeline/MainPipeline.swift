@@ -45,6 +45,17 @@ struct MainPipeline: Sendable {
         let checkoutLog = recorder.log(.checkout)
         checkoutLog(LogLine(text: "$ git checkout --detach origin/\(target)", kind: .command))
         try await effects.detach("origin/\(target)", log: checkoutLog)
+        do {
+            try await copyLocal(log: checkoutLog)
+        } catch let error as LocalCopyError {
+            checkoutLog(LogLine(text: error.localizedDescription, kind: .error))
+            finish(.checkout, .failed, recorder, now: now)
+            recorder.update { check in
+                check.phase = .unavailable
+                check.finishedAt = now()
+            }
+            return recorder.run
+        }
         finish(.checkout, .done, recorder, now: now)
 
         guard try await checkEnvironment(recorder, now: now) else {
@@ -98,6 +109,7 @@ struct MainPipeline: Sendable {
         let log = recorder.fixLog(kind)
         do {
             try await effects.detach("origin/\(target)", log: { _ in })
+            try await copyLocal(log: { _ in })
             guard try await checkEnvironment(recorder, now: now, fix: true) else { throw EnvironmentUnavailable() }
             start(kind, recorder, now: now, fix: true)
             var session: String?
@@ -149,6 +161,15 @@ struct MainPipeline: Sendable {
                 check.phase = .unavailable
                 check.finishedAt = now()
             }
+        } catch let error as LocalCopyError {
+            log(LogLine(text: error.localizedDescription, kind: .error))
+            recorder.update { check in
+                for stage in [kind, .setup, .test] where check.proposal?[stage].state == .running {
+                    check.proposal?[stage].state = .pending
+                }
+                check.phase = .unavailable
+                check.finishedAt = now()
+            }
         } catch {
             log(LogLine(text: MRPipeline.describe(error), kind: .error))
             giveUp(kind, attempts: attempts, phase: fallback, recorder, now: now)
@@ -160,6 +181,7 @@ struct MainPipeline: Sendable {
         _ commands: MainCheck.Commands, pick: Bool, _ recorder: Recorder<MainCheck>, now: @Sendable () -> Date
     ) async throws -> Bool {
         try await effects.detach("origin/\(target)", log: { _ in })
+        try await copyLocal(log: { _ in })
         guard try await checkEnvironment(recorder, now: now, fix: true) else { throw EnvironmentUnavailable() }
         guard !commands.test.isEmpty else {
             recorder.update { $0.proposal?[.test].state = .failed }
@@ -207,6 +229,11 @@ struct MainPipeline: Sendable {
         markLastLine(.environment, recorder, as: .ok, fix: fix)
         finish(.environment, .done, recorder, now: now, fix: fix)
         return true
+    }
+
+    private func copyLocal(log: @escaping LogSink) async throws {
+        guard project.copiesLocally else { return }
+        try await effects.copy(project.copiedPaths, from: project.localCopy, log: log)
     }
 
     private func giveUp(

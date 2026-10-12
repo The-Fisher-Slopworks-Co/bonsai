@@ -2,10 +2,12 @@
 // Copyright (C) 2026 The Fisher Slopworks Co
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ProjectSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: ProjectSettingsModel
+    @State private var choosingLocalCopy = false
     let claudeSettings: ClaudeSettings
     let onSave: (Project) -> Void
     var onApply: (Project) -> Void = { _ in }
@@ -49,6 +51,29 @@ struct ProjectSettingsSheet: View {
                     }
                     .labelsHidden()
                     .fixedSize()
+                }
+                GridRow {
+                    label(localized("ps.localCopy"))
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            TextField("", text: $model.draft.localCopy, prompt: Text(verbatim: "~/src/project"))
+                                .font(.system(size: 12, design: .monospaced))
+                                .textFieldStyle(.roundedBorder)
+                                .autocorrectionDisabled()
+                            Button(localized("ps.localCopyChoose")) { choosingLocalCopy = true }
+                        }
+                        Text(verbatim: localized("ps.localCopyHint")).font(.system(size: 11)).foregroundStyle(
+                            .secondary)
+                    }
+                    .fileImporter(isPresented: $choosingLocalCopy, allowedContentTypes: [.folder]) { result in
+                        if case .success(let url) = result { model.draft.localCopy = url.path }
+                    }
+                }
+                GridRow {
+                    label(localized("ps.copy"))
+                    command($model.draft.copied, nil, placeholder: "node_modules", hint: localized("ps.copyHint"))
+                        .disabled(model.draft.localCopy.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .opacity(model.draft.localCopy.trimmingCharacters(in: .whitespaces).isEmpty ? 0.5 : 1)
                 }
                 GridRow {
                     label(localized("projects.environment"))
@@ -190,7 +215,7 @@ struct ProjectSettingsSheet: View {
     }
 
     private func command(
-        _ text: Binding<String>, _ kind: ProjectSettingsModel.Command, placeholder: String, hint: String
+        _ text: Binding<String>, _ kind: ProjectSettingsModel.Command?, placeholder: String, hint: String
     ) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             TextField("", text: text, prompt: Text(verbatim: placeholder), axis: .vertical)
@@ -198,7 +223,7 @@ struct ProjectSettingsSheet: View {
                 .lineLimit(1...4)
                 .textFieldStyle(.roundedBorder)
                 .autocorrectionDisabled()
-            if let was = model.was(kind) {
+            if let kind, let was = model.was(kind) {
                 Text(
                     "\(localized("main.was"))\(Text(verbatim: was).font(.system(size: 11, design: .monospaced)))"
                 )

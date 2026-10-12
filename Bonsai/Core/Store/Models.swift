@@ -34,6 +34,17 @@ struct Project: Codable, Equatable, Identifiable, Sendable {
     var environmentChecks: [String] {
         environment.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
+
+    var localCopy: String = ""
+    var copied: String = ""
+
+    var copiedPaths: [String] {
+        copied.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    var copiesLocally: Bool { !localCopy.isEmpty && !copiedPaths.isEmpty }
+
+    var localCopyPath: String? { localCopy.isEmpty ? nil : (localCopy as NSString).expandingTildeInPath }
 }
 
 extension Project {
@@ -52,6 +63,8 @@ extension Project {
         claude = try c.decodeIfPresent(ClaudeMode.self, forKey: .claude) ?? .inherit
         rules = try c.decodeIfPresent(String.self, forKey: .rules) ?? ""
         environment = try c.decodeIfPresent(String.self, forKey: .environment) ?? ""
+        localCopy = try c.decodeIfPresent(String.self, forKey: .localCopy) ?? ""
+        copied = try c.decodeIfPresent(String.self, forKey: .copied) ?? ""
     }
 }
 

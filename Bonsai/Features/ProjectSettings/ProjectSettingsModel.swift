@@ -48,7 +48,15 @@ final class ProjectSettingsModel {
     var hasChanges: Bool { draft != original }
 
     var canSave: Bool {
-        hasChanges && !draft.test.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        hasChanges && !draft.test.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && copiedAreRelative
+    }
+
+    var copiedAreRelative: Bool {
+        draft.copiedPaths.allSatisfy { path in
+            let parts = path.split(separator: "/").filter { $0 != "." }
+            return !path.hasPrefix("/") && !path.hasPrefix("~") && parts.first.map { $0 != ".git" } == true
+                && !parts.contains("..")
+        }
     }
 
     var branchNames: [String] {
@@ -71,6 +79,8 @@ final class ProjectSettingsModel {
         project.test = project.test.trimmingCharacters(in: .whitespacesAndNewlines)
         project.environment = project.environment.trimmingCharacters(in: .whitespacesAndNewlines)
         project.rules = project.rules.trimmingCharacters(in: .whitespacesAndNewlines)
+        project.localCopy = project.localCopy.trimmingCharacters(in: .whitespacesAndNewlines)
+        project.copied = project.copiedPaths.joined(separator: "\n")
         return project
     }
 
