@@ -21,10 +21,11 @@ enum ProcessRunner {
         _ arguments: [String],
         in directory: URL? = nil,
         environment: [String: String] = [:],
+        input: Data? = nil,
         onLine: (@Sendable (String) -> Void)? = nil
     ) async throws -> CommandResult {
         let process = try Spawned(
-            executable: executable, arguments: arguments, directory: directory, environment: environment)
+            executable: executable, arguments: arguments, directory: directory, environment: environment, input: input)
         return try await withTaskCancellationHandler {
             let output = await process.readAll(onLine: onLine)
             let status = await process.wait()
@@ -52,16 +53,31 @@ private final class Spawned: @unchecked Sendable {
     private let lock = NSLock()
     private var exited = false
 
-    init(executable: String, arguments: [String], directory: URL?, environment: [String: String]) throws {
+    init(executable: String, arguments: [String], directory: URL?, environment: [String: String], input: Data?)
+        throws
+    {
         var fds: [Int32] = [0, 0]
         guard pipe(&fds) == 0 else { throw ProcessRunner.LaunchError(errno: errno) }
         readFD = fds[0]
         let writeFD = fds[1]
+        var inputFDs: [Int32] = [-1, -1]
+        if input != nil && pipe(&inputFDs) != 0 {
+            let error = errno
+            close(readFD)
+            close(writeFD)
+            throw ProcessRunner.LaunchError(errno: error)
+        }
 
         var actions: posix_spawn_file_actions_t?
         posix_spawn_file_actions_init(&actions)
         defer { posix_spawn_file_actions_destroy(&actions) }
-        posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
+        if input != nil {
+            posix_spawn_file_actions_adddup2(&actions, inputFDs[0], 0)
+            posix_spawn_file_actions_addclose(&actions, inputFDs[0])
+            posix_spawn_file_actions_addclose(&actions, inputFDs[1])
+        } else {
+            posix_spawn_file_actions_addopen(&actions, 0, "/dev/null", O_RDONLY, 0)
+        }
         posix_spawn_file_actions_adddup2(&actions, writeFD, 1)
         posix_spawn_file_actions_adddup2(&actions, writeFD, 2)
         posix_spawn_file_actions_addclose(&actions, readFD)
@@ -96,11 +112,31 @@ private final class Spawned: @unchecked Sendable {
         var child: pid_t = 0
         let rc = posix_spawn(&child, executable, &actions, &attributes, argv, envp)
         close(writeFD)
+        if let input {
+            close(inputFDs[0])
+            Self.write(input, to: inputFDs[1])
+        }
         guard rc == 0 else {
             close(readFD)
             throw ProcessRunner.LaunchError(errno: rc)
         }
         pid = child
+    }
+
+    private static func write(_ input: Data, to fd: Int32) {
+        _ = fcntl(fd, F_SETNOSIGPIPE, 1)
+        Thread.detachNewThread {
+            input.withUnsafeBytes { buffer in
+                var offset = 0
+                while offset < buffer.count {
+                    let n = Darwin.write(fd, buffer.baseAddress! + offset, buffer.count - offset)
+                    if n < 0 && errno == EINTR { continue }
+                    if n <= 0 { break }
+                    offset += n
+                }
+            }
+            close(fd)
+        }
     }
 
     func readAll(onLine: (@Sendable (String) -> Void)?) async -> String {
