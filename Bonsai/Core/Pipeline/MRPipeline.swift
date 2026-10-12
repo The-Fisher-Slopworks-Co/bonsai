@@ -7,27 +7,32 @@ enum Note: String, Sendable {
     case abort, notPushed, restart, notNeeded, ciPassed
 }
 
-final class RunRecorder: @unchecked Sendable {
-    private let lock = NSLock()
-    private var current: MRRun
-    private var revision = 0
-    private let emit: @Sendable (MRRun, Int) -> Void
-    private var flushScheduled = false
-    static let maxLogLines = 2000
+protocol Recordable: Sendable {
+    mutating func append(_ line: LogLine, to kind: StageKind, fix: Bool)
+}
 
-    convenience init(_ run: MRRun, emit: @escaping @Sendable (MRRun) -> Void) {
+typealias RunRecorder = Recorder<MRRun>
+
+final class Recorder<Value: Recordable>: @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: Value
+    private var revision = 0
+    private let emit: @Sendable (Value, Int) -> Void
+    private var flushScheduled = false
+
+    convenience init(_ run: Value, emit: @escaping @Sendable (Value) -> Void) {
         self.init(run) { run, _ in emit(run) }
     }
 
-    init(_ run: MRRun, emit: @escaping @Sendable (MRRun, Int) -> Void) {
+    init(_ run: Value, emit: @escaping @Sendable (Value, Int) -> Void) {
         current = run
         self.emit = emit
     }
 
-    var run: MRRun { lock.withLock { current } }
+    var run: Value { lock.withLock { current } }
 
-    func update(_ change: (inout MRRun) -> Void) {
-        let (snapshot, number) = lock.withLock { () -> (MRRun, Int) in
+    func update(_ change: (inout Value) -> Void) {
+        let (snapshot, number) = lock.withLock { () -> (Value, Int) in
             change(&current)
             revision += 1
             return (current, revision)
@@ -45,18 +50,7 @@ final class RunRecorder: @unchecked Sendable {
 
     func append(_ line: LogLine, to kind: StageKind, fix: Bool = false) {
         let schedule = lock.withLock { () -> Bool in
-            if fix {
-                guard current.fix != nil else { return false }
-                var stage = current.fix![kind]
-                stage.log.append(line)
-                if stage.log.count > Self.maxLogLines { stage.log.removeFirst(stage.log.count - Self.maxLogLines) }
-                current.fix![kind] = stage
-            } else {
-                var stage = current[kind]
-                stage.log.append(line)
-                if stage.log.count > Self.maxLogLines { stage.log.removeFirst(stage.log.count - Self.maxLogLines) }
-                current[kind] = stage
-            }
+            current.append(line, to: kind, fix: fix)
             if flushScheduled { return false }
             flushScheduled = true
             return true
@@ -64,7 +58,7 @@ final class RunRecorder: @unchecked Sendable {
         guard schedule else { return }
         DispatchQueue.global().asyncAfter(deadline: .now() + 0.15) { [weak self] in
             guard let self else { return }
-            let (snapshot, number) = self.lock.withLock { () -> (MRRun, Int) in
+            let (snapshot, number) = self.lock.withLock { () -> (Value, Int) in
                 self.flushScheduled = false
                 self.revision += 1
                 return (self.current, self.revision)
