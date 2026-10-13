@@ -20,9 +20,12 @@ struct MainView: View {
         NavigationSplitView {
             sidebar
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 320)
+        } content: {
+            content
+                .navigationSplitViewColumnWidth(340)
         } detail: {
             detail
-                .frame(minWidth: 640, minHeight: 480)
+                .frame(minWidth: 300, minHeight: 480)
         }
         .navigationTitle(selected?.name ?? "Bonsai")
         .navigationSubtitle(subtitle)
@@ -131,6 +134,13 @@ struct MainView: View {
         }
     }
 
+    @ViewBuilder private var content: some View {
+        if let project = selected {
+            ProjectList(project: project, selection: mrSelectionBinding(project))
+                .id(project.id)
+        }
+    }
+
     @ViewBuilder private var detail: some View {
         if store.projects.isEmpty {
             ContentUnavailableView {
@@ -145,16 +155,13 @@ struct MainView: View {
                 Button(localized("projects.add")) { addingProject = true }
             }
         } else if let project = selected {
-            ProjectDetail(
-                project: project,
-                selection: Binding(
-                    get: { mrSelection[project.id] },
-                    set: { mrSelection[project.id] = $0 }
-                ),
-                onEdit: { editing = project }
-            )
-            .id(project.id)
+            ProjectDetail(project: project, selection: mrSelection[project.id], onEdit: { editing = project })
+                .id(project.id)
         }
+    }
+
+    private func mrSelectionBinding(_ project: Project) -> Binding<String?> {
+        Binding(get: { mrSelection[project.id] }, set: { mrSelection[project.id] = $0 })
     }
 }
 

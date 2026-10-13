@@ -3,15 +3,14 @@
 
 import SwiftUI
 
-struct ProjectDetail: View {
+struct ProjectList: View {
     @Environment(Workspace.self) private var workspace
     let project: Project
     @Binding var selection: String?
-    let onEdit: () -> Void
 
     var body: some View {
         let state = workspace.state(project)
-        let check = workspace.mainCheck(project).flatMap { MainPresentation.isVisible($0) ? $0 : nil }
+        let check = workspace.visibleMainCheck(project)
         let waiting = workspace.isWaiting(project) ? project.targetBranch : nil
         Group {
             if state.loading == .loading {
@@ -34,25 +33,12 @@ struct ProjectDetail: View {
                 }
             } else {
                 let items = state.mergeRequests.map { ($0, workspace.run($0)) }
-                HStack(spacing: 0) {
-                    MRList(items: items, project: project, main: check, waitingOn: waiting, selection: $selection)
-                        .frame(width: 340)
-                    Divider()
-                    if let check, selection == MainPresentation.rowID {
-                        MainDetail(project: project, check: check, onEdit: onEdit)
-                            .id(MainPresentation.rowID)
-                    } else if let mr = state.mergeRequests.first(where: { $0.id == selection }) {
-                        MRDetail(mr: mr, run: workspace.run(mr), waitingOn: waiting)
-                            .id(mr.id)
-                    } else {
-                        Color.clear
+                MRList(items: items, project: project, main: check, waitingOn: waiting, selection: $selection)
+                    .onAppear { selectFirstIfNeeded(items, main: check, waitingOn: waiting) }
+                    .onChange(of: state.mergeRequests.map(\.id)) {
+                        selectFirstIfNeeded(items, main: check, waitingOn: waiting)
                     }
-                }
-                .onAppear { selectFirstIfNeeded(items, main: check, waitingOn: waiting) }
-                .onChange(of: state.mergeRequests.map(\.id)) {
-                    selectFirstIfNeeded(items, main: check, waitingOn: waiting)
-                }
-                .onChange(of: check == nil) { selectFirstIfNeeded(items, main: check, waitingOn: waiting) }
+                    .onChange(of: check == nil) { selectFirstIfNeeded(items, main: check, waitingOn: waiting) }
             }
         }
     }
@@ -63,6 +49,24 @@ struct ProjectDetail: View {
         let group = main.map { MainPresentation($0, branch: project.targetBranch).group }
         let first = MRPresentation.groups(items, waitingOn: waitingOn, main: group).first
         selection = first?.main == true ? MainPresentation.rowID : first?.items.first?.0.id
+    }
+}
+
+struct ProjectDetail: View {
+    @Environment(Workspace.self) private var workspace
+    let project: Project
+    let selection: String?
+    let onEdit: () -> Void
+
+    var body: some View {
+        let waiting = workspace.isWaiting(project) ? project.targetBranch : nil
+        if let check = workspace.visibleMainCheck(project), selection == MainPresentation.rowID {
+            MainDetail(project: project, check: check, onEdit: onEdit)
+                .id(MainPresentation.rowID)
+        } else if let mr = workspace.state(project).mergeRequests.first(where: { $0.id == selection }) {
+            MRDetail(mr: mr, run: workspace.run(mr), waitingOn: waiting)
+                .id(mr.id)
+        }
     }
 }
 
@@ -510,5 +514,11 @@ extension LogLine.Kind {
         case .claude: .purple
         case .tool: .primary
         }
+    }
+}
+
+extension Workspace {
+    fileprivate func visibleMainCheck(_ project: Project) -> MainCheck? {
+        mainCheck(project).flatMap { MainPresentation.isVisible($0) ? $0 : nil }
     }
 }
