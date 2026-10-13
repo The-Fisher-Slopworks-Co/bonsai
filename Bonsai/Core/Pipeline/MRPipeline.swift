@@ -4,7 +4,7 @@
 import Foundation
 
 enum Note: String, Sendable {
-    case abort, notPushed, restart, notNeeded, ciPassed, notForClaude
+    case abort, notPushed, restart, notNeeded, ciPassed, notForClaude, outOfReruns, rerun
 }
 
 protocol Recordable: Sendable {
@@ -148,6 +148,7 @@ struct MRPipeline: Sendable {
             run.pushedSHA = nil
             run.pipelineID = nil
             run.failedJobID = nil
+            run.rerun = nil
             run.finishedAt = nil
             run[.rebase].caption = .onto
             run[.rebase].detail = "origin/\(target)"
@@ -314,11 +315,12 @@ struct MRPipeline: Sendable {
     private func watchCI(sha: String, pushed: Bool, _ recorder: RunRecorder, attempt: Int, now: @Sendable () -> Date)
         async throws -> Outcome
     {
-        recorder.update { $0[.ci].caption = .pipeline }
+        let rerun = recorder.run.rerun
+        if rerun == nil { recorder.update { $0[.ci].caption = .pipeline } }
         start(.ci, recorder, attempt: attempt, now: now)
         let log = recorder.log(.ci)
         let started = now()
-        var announced: Int?
+        var announced = rerun == nil ? nil : recorder.run.pipelineID
         while true {
             try Task.checkCancellation()
             let waited = now().timeIntervalSince(started)
@@ -344,7 +346,7 @@ struct MRPipeline: Sendable {
                     let job = jobs.first { project.claudeFixes(job: $0.name) } ?? jobs.first
                     let name = job?.name ?? "pipeline"
                     log(LogLine(text: "\(name): failed", kind: .error))
-                    if let job, project.claude != .off, !project.claudeFixes(job: job.name) {
+                    if let job, rerun == nil, project.claude != .off, !project.claudeFixes(job: job.name) {
                         log(LogLine(text: Note.notForClaude.rawValue, kind: .note))
                     }
                     finish(.ci, .failed, recorder, now: now) {

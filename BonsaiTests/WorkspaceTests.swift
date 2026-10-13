@@ -24,6 +24,7 @@ struct WorkspaceTests {
         var mrs: [String] = []
         var pipelineStatus = "success"
         var statusBySHA: [String: String] = [:]
+        var retries = 0
         func handler() -> MockURLProtocol.Handler {
             { [self] request in
                 let path = request.url!.path()
@@ -42,7 +43,10 @@ struct WorkspaceTests {
                         )
                     )
                 }
-                if path.hasSuffix("/retry") { return (201, json(#"{"id": 5, "status": "pending", "sha": ""}"#)) }
+                if path.hasSuffix("/retry") {
+                    lock.withLock { retries += 1 }
+                    return (201, json(#"{"id": 5, "status": "pending", "sha": ""}"#))
+                }
                 if path.hasSuffix("/jobs") { return (200, json(#"[{"id": 50, "name": "lint", "status": "failed"}]"#)) }
                 return (404, Data())
             }
@@ -210,6 +214,61 @@ struct WorkspaceTests {
         f.workspace.rerunCI(mr)
         await f.workspace.waitUntilIdle()
         #expect(f.workspace.run(mr).status == .upToDate(pushed: true))
+    }
+
+    @Test func jobNotForClaudeIsRerunThenLeftAlone() async throws {
+        let f = try await fixture()
+        defer {
+            f.store.signOut()
+            f.repo.remove()
+        }
+        let main = try await f.repo.sh("git --git-dir=\(f.repo.origin.path) rev-parse main", in: f.repo.root)
+        f.gitlab.statusBySHA[main] = "success"
+        f.gitlab.pipelineStatus = "failed"
+        var project = f.project
+        project.jobs = "test"
+        project.reruns = 2
+        var reported: [MRStatus] = []
+        f.workspace.onStatusChange = { reported.append($0.new) }
+        f.workspace.add(project)
+        await f.workspace.waitUntilIdle()
+        let mr = f.workspace.state(project).mergeRequests[0]
+        for _ in 0..<200 where f.workspace.run(mr)[.ci].caption != .ciFlaky {
+            try await Task.sleep(for: .milliseconds(25))
+            await f.workspace.waitUntilIdle()
+        }
+        let run = f.workspace.run(mr)
+        #expect(f.gitlab.lock.withLock { f.gitlab.retries } == 2)
+        #expect(run.status == .ciFailed(job: "lint"))
+        #expect(run.rerun == CIRerun(job: "lint", count: 2, limit: 2))
+        #expect(
+            run[.ci].log.map(\.text) == [
+                "pipeline #5", "lint: failed", "notForClaude", "rerun 1 2", "lint: failed", "rerun 2 2", "lint: failed",
+                "outOfReruns",
+            ])
+        #expect(MRPresentation.text(run[.ci].log[3]) == localized("mr.note.rerun", 1, 2))
+        #expect(MRPresentation.subtitle(run[.ci]) == localized("mr.ciFlakySub.2", "lint"))
+        #expect(MRPresentation(run).bannerBody == localized("mr.bodyFlaky.2"))
+        #expect(reported.filter { $0 == .ciFailed(job: "lint") }.count == 1)
+
+        f.gitlab.pipelineStatus = "success"
+        f.workspace.rerunCI(mr)
+        await f.workspace.waitUntilIdle()
+        #expect(f.workspace.run(mr).status == .upToDate(pushed: true))
+        #expect(f.workspace.run(mr).rerun == nil)
+    }
+
+    @Test func rerunningShowsTheCount() {
+        var run = MRRun()
+        run.status = .running(.ci, attempt: 1)
+        run.rerun = CIRerun(job: "build_docker_branch", count: 1, limit: 2)
+        run[.ci].caption = .ciRerun
+        run[.ci].detail = "1 2 build_docker_branch"
+        let shown = MRPresentation(run)
+        #expect(shown.statusText == localized("mr.rerunning") + " · " + localized("mr.rerunCount", 1, 2))
+        #expect(shown.bannerBody == localized("mr.bodyRerun", "build_docker_branch"))
+        #expect(shown.actions == [.stop])
+        #expect(MRPresentation.subtitle(run[.ci]) == localized("mr.ciRerunSub", "build_docker_branch", 1, 2))
     }
 
     @Test func mainIsCheckedBeforeMergeRequests() async throws {
