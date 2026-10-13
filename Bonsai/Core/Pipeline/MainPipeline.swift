@@ -36,7 +36,7 @@ struct MainPipeline: Sendable {
         if let ci, ci.status != .running {
             let log = recorder.log(.ci)
             log(LogLine(text: "pipeline #\(ci.id) · \(target) · \(sha.prefix(7))", kind: .output))
-            if ci.status == .failed, let job = try? await effects.failedJob(pipeline: ci.id) {
+            if ci.status == .failed, let job = try? await effects.failedJobs(pipeline: ci.id).first {
                 log(LogLine(text: "\(job.name): failed", kind: .error))
             }
         }

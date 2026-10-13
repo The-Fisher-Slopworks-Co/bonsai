@@ -4,7 +4,7 @@
 import Foundation
 
 enum Note: String, Sendable {
-    case abort, notPushed, restart, notNeeded, ciPassed
+    case abort, notPushed, restart, notNeeded, ciPassed, notForClaude
 }
 
 protocol Recordable: Sendable {
@@ -340,9 +340,13 @@ struct MRPipeline: Sendable {
                     }
                     return .finished
                 case .failed:
-                    let job = try await effects.failedJob(pipeline: pipeline.id)
+                    let jobs = try await effects.failedJobs(pipeline: pipeline.id)
+                    let job = jobs.first { project.claudeFixes(job: $0.name) } ?? jobs.first
                     let name = job?.name ?? "pipeline"
                     log(LogLine(text: "\(name): failed", kind: .error))
+                    if let job, project.claude != .off, !project.claudeFixes(job: job.name) {
+                        log(LogLine(text: Note.notForClaude.rawValue, kind: .note))
+                    }
                     finish(.ci, .failed, recorder, now: now) {
                         $0.caption = .ciFailed
                         $0.detail = name

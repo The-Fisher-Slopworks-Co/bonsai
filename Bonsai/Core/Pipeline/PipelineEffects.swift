@@ -43,6 +43,6 @@ protocol PipelineEffects: Sendable {
     func head() async throws -> String
     func push(_ branch: String, expected: String, log: @escaping LogSink) async throws -> PushResult
     func pipeline(sha: String) async throws -> CIPipeline?
-    func failedJob(pipeline: Int) async throws -> CIJob?
+    func failedJobs(pipeline: Int) async throws -> [CIJob]
     func sleep(_ seconds: TimeInterval) async throws
 }

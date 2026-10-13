@@ -3102,6 +3102,23 @@
         }
       }
     },
+    "mr.note.notForClaude": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not in “CI jobs”, Claude won’t fix it"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "нет в «Джобы CI», Claude не чинит"
+          }
+        }
+      }
+    },
     "mr.note.notNeeded": {
       "extractionState": "manual",
       "localizations": {
