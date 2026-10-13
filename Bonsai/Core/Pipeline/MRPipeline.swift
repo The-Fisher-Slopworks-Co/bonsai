@@ -126,11 +126,12 @@ struct MRPipeline: Sendable {
 
     private enum Outcome { case finished, restart }
 
-    func watchCIOnly(_ recorder: RunRecorder, sha: String, pushed: Bool, now: @Sendable () -> Date = Date.init) async
-        -> MRRun
-    {
+    func watchCIOnly(
+        _ recorder: RunRecorder, sha: String, pushed: Bool, retried: Int, now: @Sendable () -> Date = Date.init
+    ) async -> MRRun {
         do {
-            _ = try await watchCI(sha: sha, pushed: pushed, recorder, attempt: recorder.run.attempt, now: now)
+            _ = try await watchCI(
+                sha: sha, pushed: pushed, recorder, attempt: recorder.run.attempt, retried: retried, now: now)
         } catch is CancellationError {
         } catch {
             fail(recorder, error: error, now: now)
@@ -312,15 +313,18 @@ struct MRPipeline: Sendable {
         return true
     }
 
-    private func watchCI(sha: String, pushed: Bool, _ recorder: RunRecorder, attempt: Int, now: @Sendable () -> Date)
-        async throws -> Outcome
-    {
+    private func watchCI(
+        sha: String, pushed: Bool, _ recorder: RunRecorder, attempt: Int, retried: Int? = nil,
+        now: @Sendable () -> Date
+    ) async throws -> Outcome {
         let rerun = recorder.run.rerun
         if rerun == nil { recorder.update { $0[.ci].caption = .pipeline } }
         start(.ci, recorder, attempt: attempt, now: now)
         let log = recorder.log(.ci)
         let started = now()
         var announced = rerun == nil ? nil : recorder.run.pipelineID
+        // GitLab keeps reporting a retried pipeline as failed until it picks the retry up.
+        var stale = retried
         while true {
             try Task.checkCancellation()
             let waited = now().timeIntervalSince(started)
@@ -330,6 +334,11 @@ struct MRPipeline: Sendable {
                     recorder.update { $0.pipelineID = pipeline.id }
                     log(LogLine(text: "pipeline #\(pipeline.id)", kind: .output))
                 }
+                if pipeline.id == stale, pipeline.status == .failed, waited < config.ciAppearTimeout {
+                    try await effects.sleep(config.ciPollInterval)
+                    continue
+                }
+                stale = nil
                 switch pipeline.status {
                 case .running:
                     break

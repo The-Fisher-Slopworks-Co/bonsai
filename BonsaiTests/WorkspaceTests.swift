@@ -25,6 +25,9 @@ struct WorkspaceTests {
         var pipelineStatus = "success"
         var statusBySHA: [String: String] = [:]
         var retries = 0
+        // Real GitLab reports a just-retried pipeline as failed with no failed jobs, then as running.
+        var afterRetry: [String] = []
+        var stale = false
         func handler() -> MockURLProtocol.Handler {
             { [self] request in
                 let path = request.url!.path()
@@ -36,18 +39,23 @@ struct WorkspaceTests {
                         URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?.first {
                             $0.name == "sha"
                         }?.value ?? ""
-                    return (
-                        200,
-                        json(
-                            #"[{"id": 5, "status": "\#(lock.withLock { statusBySHA[sha] ?? pipelineStatus })", "sha": "\#(sha)"}]"#
-                        )
-                    )
+                    let status = lock.withLock {
+                        stale = afterRetry.first == "failed"
+                        return afterRetry.isEmpty ? statusBySHA[sha] ?? pipelineStatus : afterRetry.removeFirst()
+                    }
+                    return (200, json(#"[{"id": 5, "status": "\#(status)", "sha": "\#(sha)"}]"#))
                 }
                 if path.hasSuffix("/retry") {
-                    lock.withLock { retries += 1 }
+                    lock.withLock {
+                        retries += 1
+                        afterRetry = ["failed", "running"]
+                    }
                     return (201, json(#"{"id": 5, "status": "pending", "sha": ""}"#))
                 }
-                if path.hasSuffix("/jobs") { return (200, json(#"[{"id": 50, "name": "lint", "status": "failed"}]"#)) }
+                if path.hasSuffix("/jobs") {
+                    if lock.withLock({ stale }) { return (200, json("[]")) }
+                    return (200, json(#"[{"id": 50, "name": "lint", "status": "failed"}]"#))
+                }
                 return (404, Data())
             }
         }
