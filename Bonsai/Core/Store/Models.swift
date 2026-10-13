@@ -53,6 +53,11 @@ struct Project: Codable, Equatable, Identifiable, Sendable {
         jobs.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
+    func claudeFixes(job: String) -> Bool {
+        let jobs = ciJobs
+        return jobs.isEmpty || jobs.contains(job)
+    }
+
     static let rerunsRange = 0...3
 }
 

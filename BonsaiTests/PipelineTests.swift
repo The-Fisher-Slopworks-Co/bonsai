@@ -13,7 +13,7 @@ final class FakeEffects: PipelineEffects, @unchecked Sendable {
     var failingCommands: Set<String> = []
     var pushResults: [PushResult] = [.ok]
     var pipelines: [CIPipeline?] = [CIPipeline(id: 7, status: .passed)]
-    var job: CIJob? = CIJob(id: 70, name: "lint")
+    var jobs = [CIJob(id: 70, name: "lint")]
     var fetchError: Error?
     var missingCopies: [String] = []
     var blockOnCommand: String?
@@ -70,7 +70,7 @@ final class FakeEffects: PipelineEffects, @unchecked Sendable {
             return pipelines[min(pipelineIndex, pipelines.count - 1)]
         }
     }
-    func failedJob(pipeline: Int) async throws -> CIJob? { job }
+    func failedJobs(pipeline: Int) async throws -> [CIJob] { jobs }
     func sleep(_ seconds: TimeInterval) async throws {
         lock.withLock { slept.append(seconds) }
         try Task.checkCancellation()
@@ -187,6 +187,33 @@ struct PipelineTests {
         #expect(run.pipelineID == 7)
         #expect(run[.ci].detail == "lint")
         #expect(effects.slept == [10])
+    }
+
+    @Test func ciFailurePrefersAJobClaudeFixes() async {
+        var project = Self.project
+        project.jobs = "test"
+        let effects = FakeEffects()
+        effects.pipelines = [CIPipeline(id: 7, status: .failed)]
+        effects.jobs = [CIJob(id: 71, name: "build_docker_branch"), CIJob(id: 72, name: "test")]
+        let (run, _) = await execute(effects, project: project)
+        #expect(run.status == .ciFailed(job: "test"))
+        #expect(run.failedJobID == 72)
+        #expect(!run[.ci].log.contains { $0.kind == .note })
+        #expect(Workspace.claudeFixes(run, project: project))
+    }
+
+    @Test func ciFailureOfAnotherJobIsNotForClaude() async {
+        var project = Self.project
+        project.jobs = "lint\ntest"
+        let effects = FakeEffects()
+        effects.pipelines = [CIPipeline(id: 7, status: .failed)]
+        effects.jobs = [CIJob(id: 71, name: "build_docker_branch")]
+        let (run, _) = await execute(effects, project: project)
+        #expect(run.status == .ciFailed(job: "build_docker_branch"))
+        #expect(run[.ci].log.map(\.text) == ["pipeline #7", "build_docker_branch: failed", "notForClaude"])
+        #expect(!Workspace.claudeFixes(run, project: project))
+        project.jobs = ""
+        #expect(Workspace.claudeFixes(run, project: project))
     }
 
     @Test func noPipelineMeansUpToDate() async {

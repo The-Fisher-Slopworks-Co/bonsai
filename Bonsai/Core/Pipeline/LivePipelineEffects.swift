@@ -93,10 +93,8 @@ struct LivePipelineEffects: PipelineEffects {
         return CIPipeline(id: pipeline.id, status: pipeline.ciStatus)
     }
 
-    func failedJob(pipeline: Int) async throws -> CIJob? {
-        try await gitlab.failedJobs(project: projectID, pipeline: pipeline).first.map {
-            CIJob(id: $0.id, name: $0.name)
-        }
+    func failedJobs(pipeline: Int) async throws -> [CIJob] {
+        try await gitlab.failedJobs(project: projectID, pipeline: pipeline).map { CIJob(id: $0.id, name: $0.name) }
     }
 
     func sleep(_ seconds: TimeInterval) async throws {

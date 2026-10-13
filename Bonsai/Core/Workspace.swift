@@ -601,8 +601,13 @@ final class Workspace {
             !isWaiting(project)
         else { return false }
         let run = run(mr)
-        guard Self.fixKind(run.status) != nil else { return false }
+        guard Self.fixKind(run.status) != nil, Self.claudeFixes(run, project: project) else { return false }
         return !(run.fix?.isActive ?? false)
+    }
+
+    nonisolated static func claudeFixes(_ run: MRRun, project: Project) -> Bool {
+        guard case .ciFailed(let job) = run.status else { return true }
+        return project.claudeFixes(job: job)
     }
 
     func shouldAutoFix(_ run: MRRun, project: Project) -> Bool {
@@ -612,7 +617,7 @@ final class Workspace {
         let settings = store.settings.claude
         switch Self.fixKind(run.status) {
         case .tests: return settings.onTests
-        case .ci: return settings.onCI && run.failedJobID != nil
+        case .ci: return settings.onCI && run.failedJobID != nil && Self.claudeFixes(run, project: project)
         case .conflict: return settings.onConflict
         case nil: return false
         }

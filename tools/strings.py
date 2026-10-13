@@ -135,6 +135,7 @@ S = {
     "mr.note.restart": ("branch changed, restarting in 2 s", "ветка изменилась, перезапуск через 2 с"),
     "mr.note.notNeeded": ("not needed, branch is up to date", "не нужен, ветка актуальна"),
     "mr.note.ciPassed": ("pipeline passed", "pipeline прошёл"),
+    "mr.note.notForClaude": ("not in “CI jobs”, Claude won’t fix it", "нет в «Джобы CI», Claude не чинит"),
     "mr.sec": ("s", "с"),
     "mr.projectSettings": ("Project Settings", "Настройки проекта"),
 
