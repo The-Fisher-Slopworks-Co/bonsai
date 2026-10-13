@@ -250,7 +250,7 @@ final class Workspace {
                 finish(mr, project, recorder)
                 return
             }
-            _ = await pipeline.watchCIOnly(recorder, sha: sha, pushed: pushed)
+            _ = await pipeline.watchCIOnly(recorder, sha: sha, pushed: pushed, retried: pipelineID)
             finish(mr, project, recorder)
         }
     }
