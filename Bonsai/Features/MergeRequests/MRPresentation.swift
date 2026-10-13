@@ -77,6 +77,14 @@ struct MRPresentation: Equatable {
             bannerTitle = statusText
             bannerBody = localized("mr.noteBehind")
             actions = [.run]
+        case .running(.ci, _) where run.rerun != nil:
+            let rerun = run.rerun ?? CIRerun(job: "", count: 0, limit: 0)
+            statusText = localized("mr.rerunning") + " · " + localized("mr.rerunCount", rerun.count, rerun.limit)
+            icon = .spinner
+            tone = .blue
+            bannerTitle = localized("mr.rerunning") + "…"
+            bannerBody = localized("mr.bodyRerun", rerun.job)
+            actions = [.stop]
         case .running(let stage, let attempt):
             let name = Self.stageName(stage) + "…"
             statusText = attempt > 1 ? "\(name) · \(localized("mr.attempt")) \(attempt)" : name
@@ -104,7 +112,9 @@ struct MRPresentation: Equatable {
             icon = .cross
             tone = .red
             bannerTitle = localized("mr.bnCi", job)
-            bannerBody = localized("mr.bodyCi")
+            bannerBody =
+                run.rerun.map { localized("mr.bodyFlaky.\(min($0.count, Project.rerunsRange.upperBound))") }
+                ?? localized("mr.bodyCi")
             actions = (run.pipelineID == nil ? [] : [.rerunCI]) + [.fix]
             canFix = true
         case .conflict(let files):
@@ -293,7 +303,21 @@ struct MRPresentation: Equatable {
         case .mainCiFailed: localized("main.sub.ciFail")
         case .commandsOnly: localized("main.sub.commandsOnly")
         case .commandsChanged: commandsChanged(numbers(stage.detail))
+        case .ciRerun: ciRerun(stage.detail)
+        case .ciFlaky: ciFlaky(stage.detail)
         }
+    }
+
+    private static func ciRerun(_ detail: String) -> String {
+        let parts = detail.split(separator: " ", maxSplits: 2).map(String.init)
+        guard parts.count == 3, let count = Int(parts[0]), let limit = Int(parts[1]) else { return "" }
+        return localized("mr.ciRerunSub", parts[2], count, limit)
+    }
+
+    private static func ciFlaky(_ detail: String) -> String {
+        let parts = detail.split(separator: " ", maxSplits: 1).map(String.init)
+        guard parts.count == 2, let count = Int(parts[0]) else { return "" }
+        return localized("mr.ciFlakySub.\(min(count, Project.rerunsRange.upperBound))", parts[1])
     }
 
     private static func commandsChanged(_ numbers: [Int]) -> String {
@@ -323,7 +347,9 @@ struct MRPresentation: Equatable {
     }
 
     static func text(_ line: LogLine) -> String {
-        line.kind == .note ? localized("mr.note.\(line.text)") : line.text
+        guard line.kind == .note else { return line.text }
+        let parts = line.text.split(separator: " ").map(String.init)
+        return localized("mr.note.\(parts[0])", bundle: .main, parts.dropFirst().compactMap { Int($0) })
     }
 
     static func displayKind(_ line: LogLine, stageState: StageState) -> LogLine.Kind {

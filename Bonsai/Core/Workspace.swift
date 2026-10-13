@@ -211,11 +211,28 @@ final class Workspace {
     }
 
     func rerunCI(_ mr: MergeRequest) {
-        guard let project = project(for: mr), let client = client(), mrTasks[mr.id] == nil else { return }
         var current = run(mr)
+        current.rerun = nil
+        current[.ci] = Stage(kind: .ci, state: .running, caption: .pipeline, startedAt: Date())
+        retryCI(mr, current)
+    }
+
+    private func autoRerun(_ mr: MergeRequest, job: String, project: Project) {
+        var current = run(mr)
+        let count = (current.rerun?.count ?? 0) + 1
+        current.rerun = CIRerun(job: job, count: count, limit: project.reruns)
+        current[.ci].state = .running
+        current[.ci].caption = .ciRerun
+        current[.ci].detail = "\(count) \(project.reruns) \(job)"
+        current[.ci].append(LogLine(text: "\(Note.rerun.rawValue) \(count) \(project.reruns)", kind: .note))
+        retryCI(mr, current)
+    }
+
+    private func retryCI(_ mr: MergeRequest, _ start: MRRun) {
+        guard let project = project(for: mr), let client = client(), mrTasks[mr.id] == nil else { return }
+        var current = start
         guard let pipelineID = current.pipelineID else { return }
         let sha = current.pushedSHA ?? mr.sha
-        current[.ci] = Stage(kind: .ci, state: .running, caption: .pipeline, startedAt: Date())
         current.status = .running(.ci, attempt: current.attempt)
         set(current, mr: mr, project: project)
         let pipeline = makePipeline(mr, project, client: client)
@@ -497,6 +514,13 @@ final class Workspace {
                     markMainBroken(project, sha: base, pipeline: pipeline, job: job)
                     return
                 }
+                if shouldRerun(final, project: project) {
+                    autoRerun(mr, job: job, project: project)
+                    return
+                }
+                if let rerun = final.rerun, !Self.claudeFixes(final, project: project) {
+                    gaveUpRerunning(mr, project: project, rerun: rerun)
+                }
                 if let held { onStatusChange?(held) }
                 if shouldAutoFix(final, project: project) { startFix(mr) }
             }
@@ -504,6 +528,20 @@ final class Workspace {
         }
         if let held { onStatusChange?(held) }
         if shouldAutoFix(final, project: project) { startFix(mr) }
+    }
+
+    private func shouldRerun(_ run: MRRun, project: Project) -> Bool {
+        project.claude != .off && !Self.claudeFixes(run, project: project) && run.pipelineID != nil
+            && (run.rerun?.count ?? 0) < project.reruns
+    }
+
+    private func gaveUpRerunning(_ mr: MergeRequest, project: Project, rerun: CIRerun) {
+        var current = run(mr)
+        current[.ci].caption = .ciFlaky
+        current[.ci].detail = "\(rerun.count) \(rerun.job)"
+        current[.ci].append(LogLine(text: Note.outOfReruns.rawValue, kind: .note))
+        set(current, mr: mr, project: project)
+        store.saveRuns(runs)
     }
 
     private func mainVerified(at sha: String?, project: Project) -> Bool {

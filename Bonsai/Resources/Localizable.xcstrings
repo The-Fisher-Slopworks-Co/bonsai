@@ -2656,6 +2656,57 @@
         }
       }
     },
+    "mr.bodyFlaky.1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rerun once. Claude doesn’t fix this job."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перезапущен 1 раз. Claude эту джобу не чинит."
+          }
+        }
+      }
+    },
+    "mr.bodyFlaky.2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rerun twice. Claude doesn’t fix this job."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перезапущен 2 раза. Claude эту джобу не чинит."
+          }
+        }
+      }
+    },
+    "mr.bodyFlaky.3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rerun 3 times. Claude doesn’t fix this job."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перезапущен 3 раза. Claude эту джобу не чинит."
+          }
+        }
+      }
+    },
     "mr.bodyFresh": {
       "extractionState": "manual",
       "localizations": {
@@ -2686,6 +2737,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "Перезапуск с rebase…"
+          }
+        }
+      }
+    },
+    "mr.bodyRerun": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ failed. Claude doesn’t fix it."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Упал %@, Claude его не чинит."
           }
         }
       }
@@ -2775,6 +2843,57 @@
         }
       }
     },
+    "mr.ciFlakySub.1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ failed after 1 rerun"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "упал %@, 1 перезапуск не помог"
+          }
+        }
+      }
+    },
+    "mr.ciFlakySub.2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ failed after 2 reruns"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "упал %@, 2 перезапуска не помогли"
+          }
+        }
+      }
+    },
+    "mr.ciFlakySub.3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ failed after 3 reruns"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "упал %@, 3 перезапуска не помогли"
+          }
+        }
+      }
+    },
     "mr.ciPassed": {
       "extractionState": "manual",
       "localizations": {
@@ -2788,6 +2907,23 @@
           "stringUnit": {
             "state": "translated",
             "value": "pipeline прошёл"
+          }
+        }
+      }
+    },
+    "mr.ciRerunSub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ failed, rerun %lld of %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "упал %@, перезапуск %lld из %lld"
           }
         }
       }
@@ -3153,6 +3289,40 @@
         }
       }
     },
+    "mr.note.outOfReruns": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "out of reruns"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "перезапуски кончились"
+          }
+        }
+      }
+    },
+    "mr.note.rerun": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "rerun %lld of %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "перезапуск %lld из %lld"
+          }
+        }
+      }
+    },
     "mr.note.restart": {
       "extractionState": "manual",
       "localizations": {
@@ -3285,6 +3455,40 @@
           "stringUnit": {
             "state": "translated",
             "value": "Перезапустить CI"
+          }
+        }
+      }
+    },
+    "mr.rerunCount": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld of %lld"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld из %lld"
+          }
+        }
+      }
+    },
+    "mr.rerunning": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rerunning CI"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перезапуск CI"
           }
         }
       }

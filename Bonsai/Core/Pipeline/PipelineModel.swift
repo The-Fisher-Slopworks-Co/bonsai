@@ -38,6 +38,7 @@ struct Stage: Codable, Equatable, Sendable {
         case afterFix
         case ref, mainCiPassed, mainCiFailed
         case commandsOnly, commandsChanged
+        case ciRerun, ciFlaky
     }
 
     var kind: StageKind
@@ -77,6 +78,12 @@ enum MRStatus: Codable, Equatable, Sendable {
     }
 }
 
+struct CIRerun: Codable, Equatable, Sendable {
+    var job: String
+    var count: Int
+    var limit: Int
+}
+
 struct MRRun: Codable, Equatable, Sendable {
     var status: MRStatus = .unknown
     var stages: [Stage] = StageKind.pipeline.map { Stage(kind: $0) }
@@ -86,6 +93,7 @@ struct MRRun: Codable, Equatable, Sendable {
     var pushedSHA: String?
     var pipelineID: Int?
     var failedJobID: Int?
+    var rerun: CIRerun?
     var finishedAt: Date?
     var fix: ClaudeFix?
 
