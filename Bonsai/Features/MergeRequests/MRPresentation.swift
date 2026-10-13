@@ -383,16 +383,20 @@ struct MRPresentation: Equatable {
         .filter { $0.main || !$0.items.isEmpty }
     }
 
+    static func attentionCount(_ items: [(MergeRequest, MRRun)], waitingOn branch: String? = nil, main: Group? = nil)
+        -> Int
+    {
+        let needsYou: Set<Group> = [.decide, .attention]
+        let mrs = items.filter { needsYou.contains(MRPresentation($0.1, waitingOn: branch).group) }.count
+        return mrs + (main.map { needsYou.contains($0) ? 1 : 0 } ?? 0)
+    }
+
     static func subtitle(project: Project, count: Int, checkedAt: Date?, waiting: Bool = false, now: Date = Date())
         -> String
     {
-        var parts = [project.path, count == 0 ? localized("mr.subtitleEmpty") : localized("mr.count", count)]
-        if count > 0 && waiting {
-            parts.append(localized("main.waiting", project.targetBranch))
-        } else if count > 0, let checkedAt {
-            parts.append(checked(checkedAt, now: now))
-        }
-        return parts.joined(separator: " · ")
+        if count == 0 { return localized("mr.subtitleEmpty") }
+        if waiting { return localized("main.waiting", project.targetBranch) }
+        return checkedAt.map { checked($0, now: now) } ?? ""
     }
 
     static func checked(_ date: Date, now: Date = Date()) -> String {

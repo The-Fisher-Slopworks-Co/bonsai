@@ -182,9 +182,7 @@ struct MRSnapshotTests {
 private struct MRDetailHost: View {
     let project: Project
     @State var selection: String?
-    var body: some View {
-        ProjectDetail(project: project, selection: $selection, onEdit: {})
-    }
+    var body: some View { ProjectColumns(project: project, selection: $selection) }
 }
 
 @MainActor
@@ -352,7 +350,19 @@ struct FixSnapshotTests {
 private struct FixHost: View {
     let project: Project
     @State var selection: String?
-    var body: some View { ProjectDetail(project: project, selection: $selection, onEdit: {}) }
+    var body: some View { ProjectColumns(project: project, selection: $selection) }
+}
+
+private struct ProjectColumns: View {
+    let project: Project
+    @Binding var selection: String?
+    var body: some View {
+        NavigationSplitView {
+            ProjectList(project: project, selection: $selection).navigationSplitViewColumnWidth(340)
+        } detail: {
+            ProjectDetail(project: project, selection: selection, onEdit: {})
+        }
+    }
 }
 
 @MainActor

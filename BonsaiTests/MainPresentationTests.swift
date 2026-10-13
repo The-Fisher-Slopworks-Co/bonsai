@@ -105,6 +105,7 @@ struct MainPresentationTests {
 
         let subtitle = MRPresentation.subtitle(
             project: PipelineTests.project, count: 5, checkedAt: Date(), waiting: true)
-        #expect(subtitle == "g/project-main · \(localized("mr.count", 5)) · \(localized("main.waiting", "main"))")
+        #expect(subtitle == localized("main.waiting", "main"))
+        #expect(MRPresentation.attentionCount([(mr, run)], waitingOn: "main", main: .attention) == 1)
     }
 }

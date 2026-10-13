@@ -20,9 +20,12 @@ struct MainView: View {
         NavigationSplitView {
             sidebar
                 .navigationSplitViewColumnWidth(min: 180, ideal: 220, max: 320)
+        } content: {
+            content
+                .navigationSplitViewColumnWidth(min: 280, ideal: 340, max: 480)
         } detail: {
             detail
-                .frame(minWidth: 640, minHeight: 480)
+                .frame(minWidth: 300, minHeight: 480)
         }
         .navigationTitle(selected?.name ?? "Bonsai")
         .navigationSubtitle(subtitle)
@@ -100,7 +103,7 @@ struct MainView: View {
     private var subtitle: String {
         guard let project = selected else { return store.account?.server.host() ?? "" }
         let state = workspace.state(project)
-        guard state.loading == .loaded else { return project.path }
+        guard state.loading == .loaded else { return "" }
         return MRPresentation.subtitle(
             project: project, count: state.mergeRequests.count, checkedAt: state.checkedAt,
             waiting: workspace.isWaiting(project))
@@ -131,6 +134,13 @@ struct MainView: View {
         }
     }
 
+    @ViewBuilder private var content: some View {
+        if let project = selected {
+            ProjectList(project: project, selection: mrSelectionBinding(project))
+                .id(project.id)
+        }
+    }
+
     @ViewBuilder private var detail: some View {
         if store.projects.isEmpty {
             ContentUnavailableView {
@@ -145,16 +155,13 @@ struct MainView: View {
                 Button(localized("projects.add")) { addingProject = true }
             }
         } else if let project = selected {
-            ProjectDetail(
-                project: project,
-                selection: Binding(
-                    get: { mrSelection[project.id] },
-                    set: { mrSelection[project.id] = $0 }
-                ),
-                onEdit: { editing = project }
-            )
-            .id(project.id)
+            ProjectDetail(project: project, selection: mrSelection[project.id], onEdit: { editing = project })
+                .id(project.id)
         }
+    }
+
+    private func mrSelectionBinding(_ project: Project) -> Binding<String?> {
+        Binding(get: { mrSelection[project.id] }, set: { mrSelection[project.id] = $0 })
     }
 }
 
@@ -165,6 +172,7 @@ struct ProjectRow: View {
     var body: some View {
         let state = workspace.state(project)
         let main = workspace.mainCheck(project).map { MainPresentation($0, branch: project.targetBranch) }
+        let visibleMain = MainPresentation.isVisible(workspace.mainCheck(project)) ? main : nil
         let mainBusy = main.map { $0.icon == .spinner || $0.icon == .claudeSpinner } ?? false
         let busy =
             mainBusy
@@ -184,13 +192,16 @@ struct ProjectRow: View {
             }
             if busy {
                 ProgressView().controlSize(.mini)
-            } else if let main, MainPresentation.isVisible(workspace.mainCheck(project)) {
+            } else if let main = visibleMain {
                 StatusIcon(icon: main.icon, size: 12)
                     .help(main.statusText)
                     .accessibilityLabel(main.statusText)
             }
-            if state.loading == .loaded {
-                Text(verbatim: "\(state.mergeRequests.count)")
+            let attention = MRPresentation.attentionCount(
+                state.mergeRequests.map { ($0, workspace.run($0)) },
+                waitingOn: workspace.isWaiting(project) ? project.targetBranch : nil, main: visibleMain?.group)
+            if state.loading == .loaded && attention > 0 {
+                Text(verbatim: "\(attention)")
                     .font(.system(size: 11).monospacedDigit())
                     .foregroundStyle(.secondary)
             }
