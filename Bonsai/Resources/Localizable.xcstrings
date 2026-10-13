@@ -4275,6 +4275,40 @@
         }
       }
     },
+    "ps.jobs": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CI jobs"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Джобы CI"
+          }
+        }
+      }
+    },
+    "ps.jobsHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude fixes only these. Empty means all."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude чинит только эти. Пусто — все."
+          }
+        }
+      }
+    },
     "ps.localCopy": {
       "extractionState": "manual",
       "localizations": {
@@ -4475,6 +4509,108 @@
           "stringUnit": {
             "state": "translated",
             "value": "На паузе"
+          }
+        }
+      }
+    },
+    "ps.rerun": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rerun CI"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перезапуск CI"
+          }
+        }
+      }
+    },
+    "ps.rerun.0": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не перезапускать"
+          }
+        }
+      }
+    },
+    "ps.rerun.1": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Once"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 раз"
+          }
+        }
+      }
+    },
+    "ps.rerun.2": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Twice"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 раза"
+          }
+        }
+      }
+    },
+    "ps.rerun.3": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 times"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 раза"
+          }
+        }
+      }
+    },
+    "ps.rerunHint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For other jobs. Claude doesn’t fix them."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Для остальных джоб. Claude их не чинит."
           }
         }
       }

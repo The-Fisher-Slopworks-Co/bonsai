@@ -81,6 +81,7 @@ final class ProjectSettingsModel {
         project.rules = project.rules.trimmingCharacters(in: .whitespacesAndNewlines)
         project.localCopy = project.localCopy.trimmingCharacters(in: .whitespacesAndNewlines)
         project.copied = project.copiedPaths.joined(separator: "\n")
+        project.jobs = project.ciJobs.joined(separator: "\n")
         return project
     }
 

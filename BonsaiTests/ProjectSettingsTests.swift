@@ -31,6 +31,27 @@ struct ProjectSettingsModelTests {
         #expect(saved.rules == "Не трогай migrations/")
     }
 
+    @Test func savedKeepsOnlyNamedJobs() {
+        let model = ProjectSettingsModel(project: PipelineTests.project, client: nil)
+        model.draft.jobs = " lint \n\n  test\n"
+        model.draft.reruns = 2
+        #expect(model.canSave)
+        let saved = model.saved()
+        #expect(saved.jobs == "lint\ntest")
+        #expect(saved.ciJobs == ["lint", "test"])
+        #expect(saved.reruns == 2)
+    }
+
+    @Test func oldProjectsDecodeWithoutJobs() throws {
+        let json = #"""
+            {"id": 1, "name": "app", "path": "g/app", "webURL": "https://x/g", "cloneURL": "https://x/g.git",
+             "defaultBranch": "main", "targetBranch": "main", "setup": "", "test": "make test"}
+            """#
+        let project = try JSONDecoder().decode(Project.self, from: Data(json.utf8))
+        #expect(project.ciJobs.isEmpty)
+        #expect(project.reruns == 0)
+    }
+
     @Test func claudeProposalPrefillsAndTracksEdits() {
         let proposal = MainCheck.Proposal(
             stages: [],
