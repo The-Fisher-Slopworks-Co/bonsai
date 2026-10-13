@@ -45,6 +45,15 @@ struct Project: Codable, Equatable, Identifiable, Sendable {
     var copiesLocally: Bool { !localCopy.isEmpty && !copiedPaths.isEmpty }
 
     var localCopyPath: String? { localCopy.isEmpty ? nil : (localCopy as NSString).expandingTildeInPath }
+
+    var jobs: String = ""
+    var reruns = 0
+
+    var ciJobs: [String] {
+        jobs.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    static let rerunsRange = 0...3
 }
 
 extension Project {
@@ -65,6 +74,8 @@ extension Project {
         environment = try c.decodeIfPresent(String.self, forKey: .environment) ?? ""
         localCopy = try c.decodeIfPresent(String.self, forKey: .localCopy) ?? ""
         copied = try c.decodeIfPresent(String.self, forKey: .copied) ?? ""
+        jobs = try c.decodeIfPresent(String.self, forKey: .jobs) ?? ""
+        reruns = try c.decodeIfPresent(Int.self, forKey: .reruns) ?? 0
     }
 }
 

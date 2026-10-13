@@ -112,6 +112,27 @@ struct ProjectSettingsSheet: View {
                     }
                 }
                 GridRow {
+                    label(localized("ps.jobs"))
+                    command($model.draft.jobs, nil, placeholder: "lint", hint: localized("ps.jobsHint"))
+                        .disabled(model.draft.claude == .off)
+                        .opacity(model.draft.claude == .off ? 0.5 : 1)
+                }
+                GridRow(alignment: .firstTextBaseline) {
+                    label(localized("ps.rerun"))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Picker(localized("ps.rerun"), selection: $model.draft.reruns) {
+                            ForEach(Project.rerunsRange, id: \.self) { count in
+                                Text(verbatim: localized("ps.rerun.\(count)")).tag(count)
+                            }
+                        }
+                        .labelsHidden()
+                        .fixedSize()
+                        Text(verbatim: localized("ps.rerunHint")).font(.system(size: 11)).foregroundStyle(.secondary)
+                    }
+                    .disabled(model.draft.claude == .off)
+                    .opacity(model.draft.claude == .off ? 0.5 : 1)
+                }
+                GridRow {
                     label(localized("ps.notes"))
                     VStack(alignment: .leading, spacing: 4) {
                         TextField(
